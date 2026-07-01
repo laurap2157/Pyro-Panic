@@ -30,7 +30,7 @@ export const levels = [
   {
     id: 5,
     key: 'FinalLevelScene',
-    name: 'Le Coeur de Braise',
+    name: 'Le Cœur de Braise',
     briefing: 'Éteindre les brasiers infernaux avant que le rituel ne soit terminé.',
     tip: 'Le pyromane utilisera toutes les menaces déjà rencontrées.'
   }

@@ -1,7 +1,7 @@
 import { levels } from '../data/levels.js';
 import gameState from '../systems/GameState.js';
 import tips from '../data/tips.js';
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 
 export default class GameOverScene extends Phaser.Scene {
   constructor() {

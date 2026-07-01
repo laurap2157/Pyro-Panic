@@ -18,14 +18,14 @@ export default class ResourceSystem {
     this.oxygen = Math.max(0, this.oxygen - this.rates.oxygenDepletion * dt);
   }
 
-  // Appelé par Emilien quand le joueur touche le camion ou une réserve
+  // Appelé lorsqu’un objet interactif change l’agent équipé.
   changeAgent(newAgent) {
     if (newAgent === "water" || newAgent === "foam") {
       this.activeAgent = newAgent;
     }
   }
 
-  // Appelé quand le joueur reste près d'une borne de recharge
+  // Appelé lorsque le joueur utilise un point de recharge.
   refillResources(delta) {
     const dt = delta / 1000;
     this.waterReserve = Math.min(100, this.waterReserve + 25 * dt);

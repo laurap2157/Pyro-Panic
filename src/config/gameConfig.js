@@ -12,7 +12,7 @@ import Level3Scene from '../scenes/Level3Scene.js';
 import Level4Scene from '../scenes/Level4Scene.js';
 import FinalLevelScene from '../scenes/FinalLevelScene.js';
 
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 
 const gameConfig = {
   type: Phaser.AUTO,
