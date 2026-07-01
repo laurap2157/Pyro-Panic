@@ -1,72 +1,69 @@
-import FireTruck from "../objects/FireTruck";
-import Player from "../objects/Player";
-import Fire from "../objects/Fire";
-import FireSystem from "../systems/FireSystem";
-import ExtinguishSystem from "../systems/ExtinguishSystem";
-import ResourceSystem from "../systems/ResourceSystem";
-import SupplyPoint from "../objects/SupplyPoint";
-import Door from "../objects/Door";
-export default class Level1Scene {
-    create() {
-        // 1. Initialiser le joueur
-        this.player = new Player();
-        
-        // 2. Créer les placeholders (rectangles)
-        this.fires = [/* liste de vos rectangles orange */];
+import * as Phaser from 'phaser';
+import Player from "../objects/Player.js";
+import Fire from "../objects/Fire.js";
+import InputManager from "../systems/InputManager.js";
+import ExtinguishSystem from "../systems/ExtinguishSystem.js";
+import ResourceSystem from "../systems/ResourceSystem.js";
 
-        // 3. Initialiser les points interactifs
-        this.supplyPoint = new SupplyPoint();
-
-        this.truck = new FireTruck(200, 300);
-
-        this.waterPoint = new SupplyPoint(100, 100, 'water');
-        
-        this.foamPoint = new SupplyPoint(500, 100, 'foam');
-
-        this.door = new Door(300, 200, true);
+export default class Level1Scene extends Phaser.Scene {
+    constructor() {
+        super('Level1Scene');
     }
 
-    update() {
-        // 4. Récupérer les inputs (via InputManager)
-        const input = InputManager.getState();
+    create() {
+        // 1. Initialisation des systèmes
+        this.inputManager = new InputManager(this);
+        this.resourceSystem = new ResourceSystem();
+        this.extinguishSystem = new ExtinguishSystem();
         
-        // 5. Appliquer les mouvements
-        this.player.move(input.moveX, input.moveY);
-        this.player.aim(input.aimX, input.aimY);
+        // 2. Initialisation des objets
+        this.player = new Player(this, 400, 300);
         
+        // Exemple de feux (ajoutez-en autant que nécessaire)
+        this.fires = [
+            new Fire({ x: 600, y: 200, size: 'small', type: 'normal' }),
+            new Fire({ x: 200, y: 500, size: 'medium', type: 'fuel' })
+        ];
+
+        // 3. Préparation du rendu
+        this.graphics = this.add.graphics();
+    }
+
+    update(time, delta) {
+        // 1. Mise à jour de l'état
+        const input = this.inputManager.getState();
+        this.resourceSystem.update(delta);
+        this.player.update(input, delta);
+
+        // 2. Logique de tir
         if (input.isShooting) {
-            this.player.shoot(input.isPowerJet);
-        } 
+            const power = input.isPowerJet ? 'strong' : 'weak';
+            
+            // On vérifie si on a assez de ressource (Eau ou Mousse)
+            // Note : le ResourceSystem gère l'agent actif via this.resourceSystem.activeAgent
+            if (this.resourceSystem.waterReserve > 0 || this.resourceSystem.foamReserve > 0) {
+                
+                this.resourceSystem.consumeAgent(power, delta);
 
-     input = InputManager.getState();
-
-// Vérifier la distance entre le joueur et le camion
-        if (input.interactPressed && this.isPlayerNear(this.truck)) {
-            this.truck.interact();
-        }
-
-     input = InputManager.getState();
-
-        if (input.interactPressed) {
-            if (this.waterPoint.isPlayerInRange(this.player)) {
-                this.waterPoint.interact(this.player);
+                // Application des dégâts sur chaque feu
+                this.fires.forEach(fire => {
+                    this.extinguishSystem.applyJet({
+                        fire: fire,
+                        agent: this.resourceSystem.activeAgent,
+                        power: power,
+                        delta: delta
+                    });
+                });
             }
-            if (this.foamPoint.isPlayerInRange(this.player)) {
-                this.foamPoint.interact(this.player);
-            }
         }
 
-     input = InputManager.getState();
-
-        // Interaction A : Ouvrir
-        if (input.interactPressed && this.door.isPlayerInRange(this.player)) {
-            this.door.open();
+        // 4. Conditions de fin
+        if (this.fires.every(f => f.isExtinguished)) {
+            this.scene.start('VictoryScene');
         }
-
-        // Interaction X : Inspecter
-        if (input.inspectPressed && this.door.isPlayerInRange(this.player)) {
-            const status = this.door.inspect();
-            // Vous pourriez afficher le résultat (status) dans une zone de texte UI ici
+        
+        if (this.resourceSystem.oxygen <= 0) {
+            this.scene.start('GameOverScene');
         }
     }
 }
