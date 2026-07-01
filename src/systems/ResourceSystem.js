@@ -1,6 +1,6 @@
 export default class ResourceSystem {
   constructor() {
-    this.activeAgent = "water"; // 'water' ou 'foam' (modifié par Emilien via interaction)
+    this.activeAgent = "water"; // 'water' ou 'foam', modifié via interaction avec un objet du décor.
     this.waterReserve = 100; // %
     this.foamReserve = 100; // %
     this.oxygen = 100; // % (Survie + Pression temporelle)

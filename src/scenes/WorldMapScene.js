@@ -1,6 +1,6 @@
 import { levels } from '../data/levels.js';
 import gameState from '../systems/GameState.js';
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 
 export default class WorldMapScene extends Phaser.Scene {
   constructor() {

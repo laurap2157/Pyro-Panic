@@ -30,7 +30,7 @@ export default class GameOverScene extends Phaser.Scene {
       color: '#ffb4a2'
     }).setOrigin(0.5);
 
-    this.add.text(width / 2, 260, `Cause : ${tipData.title}`, {
+    this.add.text(width / 2, 260, `Cause : ${tipData.cause}`, {
       fontSize: '30px',
       color: '#ffd6a5',
       wordWrap: { width: 900 }
