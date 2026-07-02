@@ -143,13 +143,19 @@ export default class Level1Scene extends Phaser.Scene {
 
     this.drawSpray(sprayOrigin, aimDirection, power);
 
+    // La ressource est consommée dès que le joueur projette l’agent actif,
+    // même si aucun feu n’est touché.
+    const hasConsumedResource = this.resourceSystem.consumeAgent(power, delta);
+
+    if (!hasConsumedResource) {
+      return;
+    }
+
     const touchedFires = this.getTouchedFires(sprayOrigin, aimDirection);
 
     if (touchedFires.length === 0) {
       return;
     }
-
-    this.resourceSystem.consumeAgent(power, delta);
 
     touchedFires.forEach((fire) => {
       this.extinguishSystem.applyJet({
