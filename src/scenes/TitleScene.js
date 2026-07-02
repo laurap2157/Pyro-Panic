@@ -1,5 +1,7 @@
 import * as Phaser from 'phaser';
 
+import MenuInputGuard from '../systems/MenuInputGuard.js';
+
 export default class TitleScene extends Phaser.Scene {
     constructor() {
         super('TitleScene');
@@ -24,66 +26,25 @@ export default class TitleScene extends Phaser.Scene {
             color: '#cccccc'
         }).setOrigin(0.5);
 
-        // Touches clavier acceptées sur l'écran titre.
         this.startKeys = this.input.keyboard.addKeys({
             space: 'SPACE',
             enter: 'ENTER'
         });
 
-        // Sert à détecter un nouvel appui manette.
-        // On évite ainsi les validations parasites.
-        this.previousGamepadButtons = {};
+        this.inputGuard = new MenuInputGuard(
+            this,
+            this.startKeys,
+            [0, 9] // A, Start
+        );
     }
 
     update() {
-        if (this.isStartPressed()) {
+        this.inputGuard.updateReleaseState();
+
+        if (this.inputGuard.isPressed()) {
             this.scene.start('WorldMapScene');
         }
 
-        this.saveCurrentGamepadButtons();
-    }
-
-    isStartPressed() {
-        const keyboardPressed =
-            Phaser.Input.Keyboard.JustDown(this.startKeys.space) ||
-            Phaser.Input.Keyboard.JustDown(this.startKeys.enter);
-
-        const gamepadPressed =
-            this.wasGamepadButtonPressed(0) || // A
-            this.wasGamepadButtonPressed(9);   // Start
-
-        return keyboardPressed || gamepadPressed;
-    }
-
-    isGamepadButtonDown(buttonIndex) {
-        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-
-        for (const gamepad of gamepads) {
-            if (!gamepad) {
-                continue;
-            }
-
-            const button = gamepad.buttons[buttonIndex];
-
-            if (button && (button.pressed || button.value > 0.5)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    wasGamepadButtonPressed(buttonIndex) {
-        const isDownNow = this.isGamepadButtonDown(buttonIndex);
-        const wasDownBefore = this.previousGamepadButtons[buttonIndex] || false;
-
-        return isDownNow && !wasDownBefore;
-    }
-
-    saveCurrentGamepadButtons() {
-        this.previousGamepadButtons = {
-            0: this.isGamepadButtonDown(0), // A
-            9: this.isGamepadButtonDown(9)  // Start
-        };
+        this.inputGuard.endFrame();
     }
 }
