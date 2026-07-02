@@ -103,8 +103,21 @@ export default class Player {
         const halfWidth = PLAYER_WIDTH / 2;
         const halfHeight = PLAYER_HEIGHT / 2;
 
-        this.sprite.x = Math.max(halfWidth, Math.min(1280 - halfWidth, this.sprite.x));
-        this.sprite.y = Math.max(halfHeight, Math.min(720 - halfHeight, this.sprite.y));
+        // On utilise la taille réelle de la scène au lieu de coder 1280 × 720 en dur.
+        // Cela permet au joueur de rester compatible avec la résolution actuelle du projet :
+        // 1376 × 768.
+        const sceneWidth = this.scene.scale.width;
+        const sceneHeight = this.scene.scale.height;
+
+        this.sprite.x = Math.max(
+            halfWidth,
+            Math.min(sceneWidth - halfWidth, this.sprite.x)
+        );
+
+        this.sprite.y = Math.max(
+            halfHeight,
+            Math.min(sceneHeight - halfHeight, this.sprite.y)
+        );
     }
 
     getPosition() {

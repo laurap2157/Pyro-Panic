@@ -3,9 +3,12 @@ import * as Phaser from 'phaser';
 import Player from '../objects/Player.js';
 import Fire from '../objects/Fire.js';
 import HudView from '../objects/HudView.js';
+
 import InputManager from '../systems/InputManager.js';
 import ExtinguishSystem from '../systems/ExtinguishSystem.js';
 import ResourceSystem from '../systems/ResourceSystem.js';
+import CollisionSystem from '../systems/CollisionSystem.js';
+
 import { level1Layout } from '../data/Level1Layout.js';
 
 const SPRAY_RANGE = 220;
@@ -18,47 +21,65 @@ export default class Level1Scene extends Phaser.Scene {
 
   preload() {
     this.load.image('level1-bg', 'assets/backgrounds/FaubourgDesEtincelles.png');
+
+    // Textures utilisées par le HUD actuel.
+    // On garde ce preload local pour l’instant, tant que la liste d’assets n’est pas figée.
     this.load.image('texture_water', 'assets/sprites/water.png');
     this.load.image('texture_foam', 'assets/sprites/foam.png');
     this.load.image('texture_oxygen', 'assets/sprites/oxygen.png');
   }
 
   create() {
-    // Mise en place du background du niveau 1
-
-    this.add.image(0, 0, 'level1-bg').setOrigin(0, 0);
     // =====================================================
-    // 1. Initialisation des systèmes
+    // 1. Background du niveau 1
+    // =====================================================
+    // Le projet est désormais calé sur les assets en 1376 × 768.
+    // On affiche donc l’image à sa taille native, sans conversion de coordonnées.
+    this.add.image(0, 0, 'level1-bg').setOrigin(0, 0);
+
+    // =====================================================
+    // 2. Initialisation des systèmes
     // =====================================================
     this.inputManager = new InputManager(this);
     this.resourceSystem = new ResourceSystem();
     this.extinguishSystem = new ExtinguishSystem();
 
-    // =====================================================
-    // 2. Initialisation du joueur
-    // =====================================================
-    this.player = new Player(this, 400, 300);
+    // Les obstacles viennent du fichier fourni par le dev décor/layout.
+    // Convention : x/y = coin haut-gauche, width/height = dimensions du rectangle bloquant.
+    this.obstacles = level1Layout.obstacles || [];
+    this.collisionSystem = new CollisionSystem(this.obstacles);
 
     // =====================================================
-    // 3. Initialisation des feux du niveau 1
+    // 3. Initialisation du joueur depuis le layout
     // =====================================================
-    this.fires = [
-      new Fire({ x: 620, y: 280, size: 'small', type: 'normal' }),
-      new Fire({ x: 860, y: 420, size: 'large', type: 'normal' }),
-    ];
+    this.player = new Player(
+      this,
+      level1Layout.playerSpawn.x,
+      level1Layout.playerSpawn.y
+    );
 
     // =====================================================
-    // 4. Préparation du rendu
+    // 4. Initialisation des feux depuis le layout
+    // =====================================================
+    this.fires = level1Layout.fires.map((fireData) => {
+      return new Fire({
+        x: fireData.x,
+        y: fireData.y,
+        size: fireData.size,
+        type: fireData.type,
+      });
+    });
+
+    // =====================================================
+    // 5. Rendu temporaire et HUD
     // =====================================================
     this.graphics = this.add.graphics();
 
-    // Instanciation du HUD partagé
     this.hud = new HudView(this);
 
-    // Texte d’aide temporaire pour les tests
     this.helpText = this.add.text(
       24,
-      680,
+      728,
       'RT / Espace / Clic : jet faible | RB + RT / Shift : jet puissant',
       {
         fontFamily: 'monospace',
@@ -78,7 +99,10 @@ export default class Level1Scene extends Phaser.Scene {
     // 2. Mise à jour des systèmes principaux
     // =====================================================
     this.resourceSystem.update(delta);
-    this.player.update(input, delta);
+
+    // Le joueur reçoit maintenant le CollisionSystem.
+    // Il ne peut donc plus traverser les obstacles fournis par Level1Layout.
+    this.player.update(input, delta, this.collisionSystem);
 
     // =====================================================
     // 3. Nettoyage du rendu temporaire
@@ -91,13 +115,13 @@ export default class Level1Scene extends Phaser.Scene {
     this.handleShooting(input, delta);
 
     // =====================================================
-    // 5. Affichage du monde et du HUD
+    // 5. Affichage monde / HUD
     // =====================================================
     this.drawFires();
     this.hud.update();
 
     // =====================================================
-    // 6. Conditions de fin de niveau
+    // 6. Conditions de fin
     // =====================================================
     this.checkEndConditions();
   }
@@ -110,7 +134,7 @@ export default class Level1Scene extends Phaser.Scene {
     const power = input.isPowerJet ? 'strong' : 'weak';
     const activeAgent = this.resourceSystem.activeAgent;
 
-    if (!this.hasResource(activeAgent)) {
+    if (!this.resourceSystem.hasActiveResource()) {
       return;
     }
 
@@ -137,18 +161,6 @@ export default class Level1Scene extends Phaser.Scene {
     });
   }
 
-  hasResource(activeAgent) {
-    if (activeAgent === 'water') {
-      return this.resourceSystem.waterReserve > 0;
-    }
-
-    if (activeAgent === 'foam') {
-      return this.resourceSystem.foamReserve > 0;
-    }
-
-    return false;
-  }
-
   getTouchedFires(sprayOrigin, aimDirection) {
     return this.fires.filter((fire) => {
       if (fire.isExtinguished) {
@@ -159,7 +171,8 @@ export default class Level1Scene extends Phaser.Scene {
       const fireVectorY = fire.y - sprayOrigin.y;
 
       const projection =
-        fireVectorX * aimDirection.x + fireVectorY * aimDirection.y;
+        fireVectorX * aimDirection.x +
+        fireVectorY * aimDirection.y;
 
       if (projection < 0 || projection > SPRAY_RANGE) {
         return false;
@@ -229,6 +242,7 @@ export default class Level1Scene extends Phaser.Scene {
     if (fire.size === 'small') return 18;
     if (fire.size === 'medium') return 28;
     if (fire.size === 'large') return 40;
+
     return 24;
   }
 
