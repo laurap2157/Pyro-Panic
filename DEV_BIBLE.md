@@ -139,7 +139,7 @@ BootScene
 Le niveau sélectionné est stocké dans `GameState` :
 
 ```js
-gameState.currentLevelId
+gameState.currentLevelId;
 ```
 
 La carte définit le niveau courant avant de lancer le briefing :
@@ -152,7 +152,7 @@ this.scene.start('BriefingScene');
 Le briefing retrouve ensuite le niveau courant via :
 
 ```js
-levels.find(level => level.id === gameState.currentLevelId);
+levels.find((level) => level.id === gameState.currentLevelId);
 ```
 
 ---
@@ -233,21 +233,21 @@ src/systems/GameState.js
 Propriétés principales :
 
 ```js
-unlockedLevel
-currentLevelId
-lastResult
+unlockedLevel;
+currentLevelId;
+lastResult;
 ```
 
 Méthodes principales :
 
 ```js
-setCurrentLevel(levelId)
-isLevelUnlocked(levelId)
-unlockNextLevel()
-setLastResult(result)
-resetRun()
-save()
-load()
+setCurrentLevel(levelId);
+isLevelUnlocked(levelId);
+unlockNextLevel();
+setLastResult(result);
+resetRun();
+save();
+load();
 ```
 
 Le déverrouillage est persistant via `localStorage`.
@@ -255,7 +255,7 @@ Le déverrouillage est persistant via `localStorage`.
 Clé utilisée :
 
 ```js
-pyro-panic-game-state
+pyro - panic - game - state;
 ```
 
 Pour réinitialiser la progression pendant les tests, utiliser dans la console navigateur :
@@ -377,15 +377,15 @@ gérer les touches maintenues entre scènes
 Méthodes principales :
 
 ```js
-updateReleaseState()
-isPressed()
-areInputsReleased()
-endFrame()
-isKeyboardKeyDown()
-wasKeyboardKeyPressed()
-isGamepadButtonDown()
-wasGamepadButtonPressed()
-saveCurrentInputs()
+updateReleaseState();
+isPressed();
+areInputsReleased();
+endFrame();
+isKeyboardKeyDown();
+wasKeyboardKeyPressed();
+isGamepadButtonDown();
+wasGamepadButtonPressed();
+saveCurrentInputs();
 ```
 
 Le helper surveille à la fois :
@@ -464,7 +464,7 @@ La position du joueur est nécessaire pour calculer la visée souris.
 Ne pas utiliser :
 
 ```js
-InputManager.getState()
+InputManager.getState();
 ```
 
 car `getState()` n’est pas une méthode statique.
@@ -496,19 +496,19 @@ this.player.update(inputState, delta);
 Méthodes publiques à utiliser par les scènes :
 
 ```js
-getPosition()
-getAimDirection()
-getSprayOrigin()
+getPosition();
+getAimDirection();
+getSprayOrigin();
 ```
 
 Les scènes ne doivent pas appeler directement :
 
 ```js
-player.move()
-player.updateAim()
-player.updateAimLine()
-player.sprite.x
-player.sprite.y
+player.move();
+player.updateAim();
+player.updateAimLine();
+player.sprite.x;
+player.sprite.y;
 ```
 
 Règle d’intégration :
@@ -532,13 +532,13 @@ src/objects/Fire.js
 Un feu possède :
 
 ```js
-x
-y
-size
-type
-maxHp
-hp
-isExtinguished
+x;
+y;
+size;
+type;
+maxHp;
+hp;
+isExtinguished;
 ```
 
 Tailles supportées :
@@ -570,7 +570,7 @@ large = 250
 Méthode principale :
 
 ```js
-takeDamage(amount)
+takeDamage(amount);
 ```
 
 ---
@@ -586,13 +586,13 @@ src/systems/ExtinguishSystem.js
 Dégât de base actuel :
 
 ```js
-baseDamage = 30
+baseDamage = 30;
 ```
 
 Méthode principale :
 
 ```js
-applyJet({ fire, agent, power, delta })
+applyJet({ fire, agent, power, delta });
 ```
 
 Agents :
@@ -648,28 +648,28 @@ src/systems/ResourceSystem.js
 Ressources actuelles :
 
 ```js
-activeAgent = "water"
-waterReserve = 100
-foamReserve = 100
-oxygen = 100
+activeAgent = 'water';
+waterReserve = 100;
+foamReserve = 100;
+oxygen = 100;
 ```
 
 Taux actuels :
 
 ```js
-weak = 6
-strong = 15
-oxygenDepletion = 1
+weak = 6;
+strong = 15;
+oxygenDepletion = 1;
 ```
 
 Méthodes actuelles :
 
 ```js
-update(delta)
-changeAgent(newAgent)
-refillResources(delta)
-consumeAgent(power, delta)
-isAsphyxiated()
+update(delta);
+changeAgent(newAgent);
+refillResources(delta);
+consumeAgent(power, delta);
+isAsphyxiated();
 ```
 
 Règles :
@@ -683,38 +683,54 @@ le changement d’agent doit venir d’un objet du décor
 la recharge n’est pas encore exploitée dans le niveau 1
 ```
 
-### Décision HUD — liquide actif
+### Décision HUD — contrat technique HudView
 
-Le HUD ne doit pas afficher deux jauges séparées eau + mousse à terme.
+La jauge unique de liquide actif (bleue pour l'eau, blanche/gris clair pour la mousse) et la jauge d'oxygène sont gérées de manière centralisée et modulaire via un composant dédié afin d'éviter la duplication de code entre les scènes de niveau.
 
-Décision validée :
+Fichier :
+src/objects/HudView.js
 
-```text
-une seule jauge de liquide actif
-bleue quand l’agent actif est water
-blanche / gris clair quand l’agent actif est foam
-```
+Contrat technique et initialisation :
+Le HUD s'instancie dans la méthode create() de chaque scène de niveau en lui passant l'instance de la scène en paramètre :
+this.hud = new HudView(this);
+
+Mise à jour :
+Pour actualiser l'état visuel et appliquer les animations, la scène doit appeler la méthode de mise à jour dans sa boucle update() principale :
+this.hud.update();
+
+Structure interne (Phaser 4) :
+Pour des raisons de performance et de compatibilité avec l'API graphique de Phaser 4, le HUD manipule des objets natifs :
+
+- Phaser.GameObjects.Rectangle pour les arrière-plans et les zones de crise (flash rouge).
+- Phaser.GameObjects.TileSprite pour le remplissage texturé dynamique ('texture_water', 'texture_foam', 'texture_oxygen').
+- Phaser.GameObjects.Graphics uniquement pour le tracé statique des bordures.
+
+L'effet de secousse (shakeOffsetX/Y) lié à la consommation active de fluide est directement encapsulé dans la méthode update() de HudView, soulageant ainsi le code de la scène.
+
+````
 
 Les réserves restent séparées dans `ResourceSystem` :
 
 ```js
-waterReserve
-foamReserve
-activeAgent
-```
+waterReserve;
+foamReserve;
+activeAgent;
+````
 
 Mais le HUD graphique futur devra afficher la réserve correspondant à `activeAgent`.
 
-Méthodes recommandées à ajouter dans `ResourceSystem` pour préparer ce HUD :
+Afin de respecter l'encapsulation et d'éviter que les scènes ou la vue du HUD ne lisent directement les variables internes (`waterReserve`, `foamReserve`), la classe ResourceSystem expose les méthodes d'abstraction suivantes qui doivent être obligatoirement utilisées :
 
-```js
-getActiveReserve()
-getActiveReserveRatio()
-getActiveAgentLabel()
-hasActiveResource()
-```
+- getActiveReserve() : Retourne la valeur brute (0 à 100) de la réserve de l'agent actuellement équipé.
+- getActiveReserveRatio() : Retourne un ratio de type float (0.0 à 1.0) basé sur l'agent actif, prêt pour le calcul de largeur (.width) des composants visuels.
+- getOxygenRatio() : Retourne le ratio de type float (0.0 à 1.0) pour la jauge d'oxygène.
+- getActiveAgentLabel() : Retourne une chaîne de caractères lisible ('Eau' ou 'Mousse').
+- hasActiveResource() : Retourne un booléen indiquant si la réserve de l'agent équipé est strictement supérieure à 0.
+- isAsphyxiated() : Retourne un booléen validant si le niveau d'oxygène a atteint 0.
 
-Ces méthodes ne doivent pas remplacer `waterReserve` et `foamReserve`, mais éviter que les scènes lisent directement les deux réserves pour construire le HUD.
+````
+
+Ces méthodes ne remplacent pas `waterReserve` et `foamReserve`, mais évitent que les scènes lisent directement les deux réserves pour construire le HUD.
 
 ---
 
@@ -724,23 +740,23 @@ Fichier :
 
 ```text
 src/scenes/Level1Scene.js
-```
+````
 
 Systèmes utilisés :
 
 ```js
-InputManager
-Player
-ResourceSystem
-ExtinguishSystem
-Fire
+InputManager;
+Player;
+ResourceSystem;
+ExtinguishSystem;
+Fire;
 ```
 
 Constantes de jet :
 
 ```js
-SPRAY_RANGE = 220
-SPRAY_WIDTH = 35
+SPRAY_RANGE = 220;
+SPRAY_WIDTH = 35;
 ```
 
 Le jet ne touche pas tous les feux automatiquement. La scène calcule les feux touchés avec :
@@ -842,7 +858,7 @@ lancer la scène du niveau courant
 Le niveau est récupéré depuis :
 
 ```js
-gameState.currentLevelId
+gameState.currentLevelId;
 ```
 
 Validation via `MenuInputGuard`.
@@ -880,7 +896,7 @@ relancer le niveau courant
 Raison transmise :
 
 ```js
-reason
+reason;
 ```
 
 Niveau relancé :
@@ -932,9 +948,9 @@ default
 Chaque tip doit contenir :
 
 ```js
-cause
-explanation
-tip
+cause;
+explanation;
+tip;
 ```
 
 Exemple d’utilisation :

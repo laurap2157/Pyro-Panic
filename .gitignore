@@ -26,3 +26,5 @@ src/local/
 *.njsproj
 *.sln
 *.sw?
+local
+src/local
