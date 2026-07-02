@@ -6,6 +6,7 @@ import HudView from '../objects/HudView.js';
 import InputManager from '../systems/InputManager.js';
 import ExtinguishSystem from '../systems/ExtinguishSystem.js';
 import ResourceSystem from '../systems/ResourceSystem.js';
+import { level1Layout } from '../data/Level1Layout.js';
 
 const SPRAY_RANGE = 220;
 const SPRAY_WIDTH = 35;
@@ -16,12 +17,16 @@ export default class Level1Scene extends Phaser.Scene {
   }
 
   preload() {
+    this.load.image('level1-bg', 'assets/backgrounds/FaubourgDesEtincelles.png');
     this.load.image('texture_water', 'assets/sprites/water.png');
     this.load.image('texture_foam', 'assets/sprites/foam.png');
     this.load.image('texture_oxygen', 'assets/sprites/oxygen.png');
   }
 
   create() {
+    // Mise en place du background du niveau 1
+
+    this.add.image(0, 0, 'level1-bg').setOrigin(0, 0);
     // =====================================================
     // 1. Initialisation des systèmes
     // =====================================================
