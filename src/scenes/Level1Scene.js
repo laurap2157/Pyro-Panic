@@ -22,57 +22,83 @@ export default class Level1Scene extends Phaser.Scene {
   preload() {
     this.load.image('level1-bg', 'assets/backgrounds/FaubourgDesEtincelles.png');
 
-    // Textures utilisées par le HUD actuel.
-    // On garde ce preload local pour l’instant, tant que la liste d’assets n’est pas figée.
     this.load.image('texture_water', 'assets/sprites/water.png');
     this.load.image('texture_foam', 'assets/sprites/foam.png');
     this.load.image('texture_oxygen', 'assets/sprites/oxygen.png');
+
+    this.load.spritesheet('fire-small', 'assets/sprites/fire_small.png', {
+        frameWidth: 32,
+        frameHeight: 32,
+    });
+
+    this.load.spritesheet('fire-large', 'assets/sprites/fire_large.png', {
+        frameWidth: 32,
+        frameHeight: 32,
+    });
   }
 
   create() {
-    // =====================================================
-    // 1. Background du niveau 1
-    // =====================================================
-    // Le projet est désormais calé sur les assets en 1376 × 768.
-    // On affiche donc l’image à sa taille native, sans conversion de coordonnées.
     this.add.image(0, 0, 'level1-bg').setOrigin(0, 0);
 
-    // =====================================================
-    // 2. Initialisation des systèmes
-    // =====================================================
     this.inputManager = new InputManager(this);
     this.resourceSystem = new ResourceSystem();
     this.extinguishSystem = new ExtinguishSystem();
 
-    // Les obstacles viennent du fichier fourni par le dev décor/layout.
-    // Convention : x/y = coin haut-gauche, width/height = dimensions du rectangle bloquant.
     this.obstacles = level1Layout.obstacles || [];
     this.collisionSystem = new CollisionSystem(this.obstacles);
 
-    // =====================================================
-    // 3. Initialisation du joueur depuis le layout
-    // =====================================================
     this.player = new Player(
       this,
       level1Layout.playerSpawn.x,
       level1Layout.playerSpawn.y
     );
 
-    // =====================================================
-    // 4. Initialisation des feux depuis le layout
-    // =====================================================
+    if (!this.anims.exists('fire-small-burn')) {
+        this.anims.create({
+            key: 'fire-small-burn',
+            frames: this.anims.generateFrameNumbers('fire-small', { start: 0, end: 7 }),
+            frameRate: 12,
+            repeat: -1,
+        });
+        }
+
+    if (!this.anims.exists('fire-large-burn')) {
+        this.anims.create({
+            key: 'fire-large-burn',
+            frames: this.anims.generateFrameNumbers('fire-large', { start: 0, end: 7 }),
+            frameRate: 12,
+            repeat: -1,
+        });
+        }
+
     this.fires = level1Layout.fires.map((fireData) => {
-      return new Fire({
+      const fire = new Fire({
         x: fireData.x,
         y: fireData.y,
         size: fireData.size,
         type: fireData.type,
       });
+
+    const textureKey = fire.size === 'large' ? 'fire-large' : 'fire-small';
+    const animKey = fire.size === 'large' ? 'fire-large-burn' : 'fire-small-burn';
+
+    fire.sprite = this.add.sprite(fire.x, fire.y, textureKey, 0);
+    fire.sprite.setDepth(2);
+    fire.sprite.play(animKey);
+
+    if (fire.size === 'small') {
+        fire.sprite.setScale(1.2);
+    } else if (fire.size === 'medium') {
+        fire.sprite.setScale(1.35);
+    } else if (fire.size === 'large') {
+        fire.sprite.setScale(1.5);
+    } else {
+        fire.sprite.setScale(1.2);
+    }
+
+      return fire;
     });
 
-    // =====================================================
-    // 5. Rendu temporaire et HUD
-    // =====================================================
     this.graphics = this.add.graphics();
 
     this.hud = new HudView(this);
@@ -90,39 +116,17 @@ export default class Level1Scene extends Phaser.Scene {
   }
 
   update(time, delta) {
-    // =====================================================
-    // 1. Lecture des inputs
-    // =====================================================
     const input = this.inputManager.getState(this.player.getPosition());
 
-    // =====================================================
-    // 2. Mise à jour des systèmes principaux
-    // =====================================================
     this.resourceSystem.update(delta);
-
-    // Le joueur reçoit maintenant le CollisionSystem.
-    // Il ne peut donc plus traverser les obstacles fournis par Level1Layout.
     this.player.update(input, delta, this.collisionSystem);
 
-    // =====================================================
-    // 3. Nettoyage du rendu temporaire
-    // =====================================================
     this.graphics.clear();
 
-    // =====================================================
-    // 4. Gameplay de tir
-    // =====================================================
     this.handleShooting(input, delta);
-
-    // =====================================================
-    // 5. Affichage monde / HUD
-    // =====================================================
     this.drawFires();
     this.hud.update();
 
-    // =====================================================
-    // 6. Conditions de fin
-    // =====================================================
     this.checkEndConditions();
   }
 
@@ -210,20 +214,19 @@ export default class Level1Scene extends Phaser.Scene {
   drawFires() {
     this.fires.forEach((fire) => {
       if (fire.isExtinguished) {
+        if (fire.sprite) {
+          fire.sprite.setVisible(false);
+        }
         return;
+      }
+
+      if (fire.sprite) {
+        fire.sprite.setVisible(true);
+        fire.sprite.setPosition(fire.x, fire.y);
       }
 
       const radius = this.getFireRadius(fire);
       const hpRatio = fire.hp / fire.maxHp;
-
-      this.graphics.fillStyle(0xff5a1f, 1);
-      this.graphics.fillCircle(fire.x, fire.y, radius);
-
-      this.graphics.fillStyle(0xffcc33, 0.8);
-      this.graphics.fillCircle(fire.x, fire.y, radius * 0.55);
-
-      this.graphics.lineStyle(2, 0x000000, 0.8);
-      this.graphics.strokeCircle(fire.x, fire.y, radius);
 
       this.graphics.fillStyle(0x222222, 1);
       this.graphics.fillRect(fire.x - 24, fire.y - radius - 18, 48, 6);
