@@ -96,6 +96,29 @@ export default class ResourceSystem {
     this.foamReserve = Math.min(100, this.foamReserve + 25 * dt);
   }
 
+  refillAgent(agent, amount = 100) {
+    if (agent === 'water') {
+      this.waterReserve = Math.min(100, this.waterReserve + amount);
+      this.isRefilling = true;
+      return true;
+    }
+
+    if (agent === 'foam') {
+      this.foamReserve = Math.min(100, this.foamReserve + amount);
+      this.isRefilling = true;
+      return true;
+    }
+
+    if (agent === 'both') {
+      this.waterReserve = Math.min(100, this.waterReserve + amount);
+      this.foamReserve = Math.min(100, this.foamReserve + amount);
+      this.isRefilling = true;
+      return true;
+    }
+
+    return false;
+  }
+
   consumeAgent(power, delta) {
     const dt = delta / 1000;
     const cost = power === 'strong' ? this.rates.strong : this.rates.weak;

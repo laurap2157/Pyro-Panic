@@ -1,35 +1,83 @@
 export default class SupplyPoint {
-    constructor(x, y, type) {
-        this.x = x;
-        this.y = y;
-        this.width = 50;  // Taille du placeholder
-        this.height = 50;
-        this.type = type; // 'water' ou 'foam' (selon la DEV_BIBLE )
-        
-        // Couleur selon le type (bleu pour eau, blanc/gris pour mousse)
-        this.color = (type === 'water') ? 0x0000FF : 0xCCCCCC; 
+  constructor(scene, config) {
+    this.scene = scene;
+
+    this.x = config.x;
+    this.y = config.y;
+    this.width = config.width || 64;
+    this.height = config.height || 64;
+
+    // Agent rechargé par ce point.
+    // Niveau 1 : uniquement 'water'.
+    // Niveaux futurs : 'foam' ou 'both' si nécessaire.
+    this.agent = config.agent || 'water';
+
+    // Quantité ajoutée lors de l’interaction.
+    this.amount = config.amount ?? 100;
+
+    this.label = config.label || config.prompt || 'Approvisionnement';
+
+    // Placeholder visuel.
+    // Plus tard, ce rectangle pourra être remplacé par un sprite ou un élément de décor.
+    this.sprite = scene.add.rectangle(
+      this.x + this.width / 2,
+      this.y + this.height / 2,
+      this.width,
+      this.height,
+      0x2f8fff,
+      0.45
+    );
+
+    this.sprite.setStrokeStyle(2, 0xffffff, 0.8);
+
+    this.text = scene.add.text(
+      this.x + this.width / 2,
+      this.y - 18,
+      this.label,
+      {
+        fontFamily: 'monospace',
+        fontSize: '14px',
+        color: '#ffffff',
+      }
+    ).setOrigin(0.5);
+  }
+
+  isPlayerInRange(playerPosition) {
+    const margin = 28;
+
+    return (
+      playerPosition.x >= this.x - margin &&
+      playerPosition.x <= this.x + this.width + margin &&
+      playerPosition.y >= this.y - margin &&
+      playerPosition.y <= this.y + this.height + margin
+    );
+  }
+
+  interact(resourceSystem) {
+    const hasRefilled = resourceSystem.refillAgent(this.agent, this.amount);
+
+    return {
+      success: hasRefilled,
+      agent: this.agent,
+      message: hasRefilled
+        ? `Réapprovisionnement : ${this.getAgentLabel()}`
+        : 'Réapprovisionnement impossible',
+    };
+  }
+
+  getAgentLabel() {
+    if (this.agent === 'water') {
+      return 'eau';
     }
 
-    // Méthode appelée lorsque le joueur appuie sur A [cite: 83, 76]
-    interact(player) {
-        console.log(`DEBUG: Interaction avec le point de ravitaillement : ${this.type}`);
-        
-        // Logique pour dire au système de ressource de recharger le joueur
-        // Vous devrez appeler votre ResourceSystem ici plus tard
-        // ResourceSystem.refill(player, this.type);
+    if (this.agent === 'foam') {
+      return 'mousse';
     }
 
-    // Rendu du placeholder
-    draw(graphics) {
-        graphics.fillStyle(this.color, 1);
-        graphics.fillRect(this.x, this.y, this.width, this.height);
+    if (this.agent === 'both') {
+      return 'eau + mousse';
     }
 
-    // Vérifie si le joueur est proche pour afficher l'aide à l'écran
-    isPlayerInRange(player) {
-        const distance = Math.sqrt(
-            Math.pow(player.x - this.x, 2) + Math.pow(player.y - this.y, 2)
-        );
-        return distance < 100; // Rayon de 100 pixels pour l'interaction
-    }
+    return 'inconnu';
+  }
 }

@@ -3,6 +3,7 @@ import * as Phaser from 'phaser';
 import Player from '../objects/Player.js';
 import Fire from '../objects/Fire.js';
 import HudView from '../objects/HudView.js';
+import SupplyPoint from '../objects/SupplyPoint.js';
 
 import InputManager from '../systems/InputManager.js';
 import ExtinguishSystem from '../systems/ExtinguishSystem.js';
@@ -71,7 +72,33 @@ export default class Level1Scene extends Phaser.Scene {
     });
 
     // =====================================================
-    // 5. Rendu temporaire et HUD
+    // 5. Initialisation des points d’approvisionnement
+    // =====================================================
+    // Le layout fournit des "interactives" génériques.
+    // Ici, le niveau 1 ne transforme que les interactifs water_refill
+    // en vrais points de recharge d’eau.
+    //
+    // Important : le niveau 1 ne propose pas de mousse,
+    // ni de changement d’agent.
+    this.supplyPoints = (level1Layout.interactives || [])
+      .filter((interactive) => interactive.type === 'water_refill')
+      .map((interactive) => {
+        return new SupplyPoint(this, {
+          ...interactive,
+          agent: 'water',
+          amount: interactive.amount ?? 100,
+          label: interactive.label || interactive.prompt || 'Recharger en eau',
+        });
+      });
+
+    this.interactionFeedbackText = this.add.text(24, 704, '', {
+      fontFamily: 'monospace',
+      fontSize: '18px',
+      color: '#ffffff',
+    });
+
+    // =====================================================
+    // 6. Rendu temporaire et HUD
     // =====================================================
     this.graphics = this.add.graphics();
 
@@ -103,6 +130,8 @@ export default class Level1Scene extends Phaser.Scene {
     // Le joueur reçoit maintenant le CollisionSystem.
     // Il ne peut donc plus traverser les obstacles fournis par Level1Layout.
     this.player.update(input, delta, this.collisionSystem);
+
+    this.handleInteractions(input);
 
     // =====================================================
     // 3. Nettoyage du rendu temporaire
@@ -250,6 +279,34 @@ export default class Level1Scene extends Phaser.Scene {
     if (fire.size === 'large') return 40;
 
     return 24;
+  }
+
+  handleInteractions(input) {
+    if (!input.interactPressed) {
+      return;
+    }
+
+    const playerPosition = this.player.getPosition();
+
+    const supplyPoint = this.supplyPoints.find((point) => {
+      return point.isPlayerInRange(playerPosition);
+    });
+
+    if (!supplyPoint) {
+      return;
+    }
+
+    const result = supplyPoint.interact(this.resourceSystem);
+
+    this.showInteractionFeedback(result.message);
+  }
+
+  showInteractionFeedback(message) {
+    this.interactionFeedbackText.setText(message);
+
+    this.time.delayedCall(1200, () => {
+      this.interactionFeedbackText.setText('');
+    });
   }
 
   checkEndConditions() {
