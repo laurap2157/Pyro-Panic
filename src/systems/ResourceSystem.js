@@ -8,7 +8,7 @@ export default class ResourceSystem {
     this.rates = {
       weak: 6, // Consommation lente
       strong: 15, // Consommation rapide (gaspillage si mal utilisé)
-      oxygenDepletion: 0.8, // Perte par seconde
+      oxygenDepletion: 1, // Perte par seconde
     };
   }
 

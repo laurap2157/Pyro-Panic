@@ -1,6 +1,9 @@
 import * as Phaser from 'phaser';
 
 import tips from '../data/tips.js';
+import { levels } from '../data/levels.js';
+import gameState from '../systems/GameState.js';
+import MenuInputGuard from '../systems/MenuInputGuard.js';
 
 export default class GameOverScene extends Phaser.Scene {
     constructor() {
@@ -8,17 +11,29 @@ export default class GameOverScene extends Phaser.Scene {
     }
 
     create(data) {
-        // Raison du game over.
+        // =====================================================
+        // 1. Récupération de la raison du game over
+        // =====================================================
         // Exemple : oxygen, weak_on_large, fuel_fire, etc.
+        // Si aucune raison n'est transmise, on affiche un message générique.
         this.reason = data?.reason || 'default';
 
-        // Niveau à relancer.
-        // Level1Scene transmet déjà levelKey.
-        // Si rien n'est transmis, on retombe sur Level1Scene pour l'étape 1.
-        this.levelKey = data?.levelKey || 'Level1Scene';
+        // =====================================================
+        // 2. Détermination du niveau à relancer
+        // =====================================================
+        // Priorité :
+        // 1. levelKey transmis directement par la scène de niveau ;
+        // 2. niveau courant stocké dans GameState ;
+        // 3. fallback sur Level1Scene.
+        const currentLevel = levels.find(level => level.id === gameState.currentLevelId);
+
+        this.levelKey = data?.levelKey || currentLevel?.key || 'Level1Scene';
 
         const tipData = tips[this.reason] || tips.default;
 
+        // =====================================================
+        // 3. Affichage de l'écran de game over
+        // =====================================================
         this.add.text(640, 180, 'GAME OVER', {
             fontFamily: 'monospace',
             fontSize: '56px',
@@ -47,101 +62,45 @@ export default class GameOverScene extends Phaser.Scene {
             wordWrap: { width: 900 }
         }).setOrigin(0.5);
 
-        this.add.text(640, 560, 'Relâchez les touches, puis appuyez sur R / Y pour recommencer', {
+        this.add.text(640, 560, 'Relâchez les touches, puis appuyez sur R / Espace / Entrée / Y pour recommencer', {
             fontFamily: 'monospace',
             fontSize: '20px',
             color: '#ffffff'
         }).setOrigin(0.5);
 
-        // Touches de recommencement.
+        // =====================================================
+        // 4. Inputs de recommencement
+        // =====================================================
+        // On garde Espace comme touche de validation/restart,
+        // mais il passe maintenant par MenuInputGuard.
+        //
+        // Cela évite qu'un Espace maintenu pendant le gameplay
+        // relance automatiquement le niveau après un game over.
         this.restartKeys = this.input.keyboard.addKeys({
             r: 'R',
             space: 'SPACE',
             enter: 'ENTER'
         });
 
-        // On bloque d'abord la validation.
-        // Cela évite que l'écran soit skippé par une touche encore maintenue.
-        this.canRestart = false;
-
-        // Sert à détecter un nouvel appui manette.
-        this.previousGamepadButtons = {};
+        this.inputGuard = new MenuInputGuard(
+            this,
+            this.restartKeys,
+            [3, 8] // Y, View
+        );
     }
 
     update() {
-        // Étape 1 : attendre que les touches/boutons soient relâchés.
-        if (!this.canRestart) {
-            if (this.areRestartInputsReleased()) {
-                this.canRestart = true;
-                this.saveCurrentGamepadButtons();
-            }
+        // Mise à jour du garde d'input.
+        // Tant que les touches/boutons surveillés ne sont pas relâchés,
+        // isPressed() reste bloqué.
+        this.inputGuard.updateReleaseState();
 
-            return;
-        }
-
-        // Étape 2 : accepter seulement un nouvel appui.
-        if (this.isRestartPressed()) {
+        // Une fois les inputs relâchés, un nouvel appui relance le niveau.
+        if (this.inputGuard.isPressed()) {
             this.scene.start(this.levelKey);
         }
 
-        this.saveCurrentGamepadButtons();
-    }
-
-    areRestartInputsReleased() {
-        const keyboardReleased =
-            !this.restartKeys.r.isDown &&
-            !this.restartKeys.space.isDown &&
-            !this.restartKeys.enter.isDown;
-
-        const gamepadReleased =
-            !this.isGamepadButtonDown(3) && // Y
-            !this.isGamepadButtonDown(8);  // View
-
-        return keyboardReleased && gamepadReleased;
-    }
-
-    isRestartPressed() {
-        const keyboardPressed =
-            Phaser.Input.Keyboard.JustDown(this.restartKeys.r) ||
-            Phaser.Input.Keyboard.JustDown(this.restartKeys.space) ||
-            Phaser.Input.Keyboard.JustDown(this.restartKeys.enter);
-
-        const gamepadPressed =
-            this.wasGamepadButtonPressed(3) || // Y
-            this.wasGamepadButtonPressed(8);   // View
-
-        return keyboardPressed || gamepadPressed;
-    }
-
-    isGamepadButtonDown(buttonIndex) {
-        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-
-        for (const gamepad of gamepads) {
-            if (!gamepad) {
-                continue;
-            }
-
-            const button = gamepad.buttons[buttonIndex];
-
-            if (button && (button.pressed || button.value > 0.5)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    wasGamepadButtonPressed(buttonIndex) {
-        const isDownNow = this.isGamepadButtonDown(buttonIndex);
-        const wasDownBefore = this.previousGamepadButtons[buttonIndex] || false;
-
-        return isDownNow && !wasDownBefore;
-    }
-
-    saveCurrentGamepadButtons() {
-        this.previousGamepadButtons = {
-            3: this.isGamepadButtonDown(3), // Y
-            8: this.isGamepadButtonDown(8)  // View
-        };
+        // Mémorisation des états courants pour détecter les nouveaux appuis.
+        this.inputGuard.endFrame();
     }
 }
