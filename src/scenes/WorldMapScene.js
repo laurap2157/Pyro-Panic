@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 
 import { levels } from '../data/levels.js';
 import gameState from '../systems/GameState.js';
+import MenuInputGuard from '../systems/MenuInputGuard.js';
 
 export default class WorldMapScene extends Phaser.Scene {
     constructor() {
@@ -9,6 +10,7 @@ export default class WorldMapScene extends Phaser.Scene {
     }
 
     create() {
+        // Index du niveau actuellement sélectionné dans la liste.
         this.selectedIndex = 0;
 
         this.add.text(640, 80, 'CARTE D’INTERVENTION', {
@@ -23,6 +25,8 @@ export default class WorldMapScene extends Phaser.Scene {
             color: '#cccccc'
         }).setOrigin(0.5);
 
+        // Textes affichés pour chaque niveau.
+        // Ils seront mis à jour dans refreshDisplay().
         this.levelTexts = [];
 
         levels.forEach((level, index) => {
@@ -37,6 +41,7 @@ export default class WorldMapScene extends Phaser.Scene {
             this.levelTexts.push(text);
         });
 
+        // Touches clavier utilisées sur la carte.
         this.keys = this.input.keyboard.addKeys({
             up: 'UP',
             down: 'DOWN',
@@ -46,26 +51,40 @@ export default class WorldMapScene extends Phaser.Scene {
             space: 'SPACE'
         });
 
-        // Empêche la carte de valider immédiatement si A / Entrée / Espace
-        // est encore maintenu depuis l’écran précédent.
-        this.canUseInputs = false;
+        // MenuInputGuard gère uniquement la validation.
+        // Il empêche notamment qu’un Espace ou un A maintenu depuis l’écran titre
+        // valide immédiatement le niveau sélectionné sur la carte.
+        this.inputGuard = new MenuInputGuard(
+            this,
+            {
+                enter: this.keys.enter,
+                space: this.keys.space
+            },
+            [0, 9] // A, Start
+        );
 
-        // Permet d’éviter que le stick ou le D-Pad fasse défiler trop vite.
+        // Permet d’éviter que le stick fasse défiler trop vite.
         this.navigationCooldown = 0;
 
-        // Sert à détecter un nouvel appui manette.
+        // État précédent des boutons D-Pad.
+        // On garde cette logique séparée du MenuInputGuard, car le D-Pad sert à naviguer,
+        // pas à valider.
         this.previousGamepadButtons = {};
 
         this.refreshDisplay();
     }
 
     update(time, delta) {
-        if (!this.canUseInputs) {
-            if (this.areMenuInputsReleased()) {
-                this.canUseInputs = true;
-                this.saveCurrentGamepadButtons();
-            }
+        // Mise à jour du garde de validation.
+        // Tant que les inputs de validation n’ont pas été relâchés,
+        // la carte ne peut pas lancer de niveau.
+        this.inputGuard.updateReleaseState();
 
+        // Si la validation n’est pas encore autorisée, on bloque uniquement la validation.
+        // On met quand même à jour les états internes en fin de frame.
+        if (!this.inputGuard.canValidate) {
+            this.inputGuard.endFrame();
+            this.saveCurrentGamepadButtons();
             return;
         }
 
@@ -74,6 +93,7 @@ export default class WorldMapScene extends Phaser.Scene {
         this.handleNavigation();
         this.handleValidation();
 
+        this.inputGuard.endFrame();
         this.saveCurrentGamepadButtons();
     }
 
@@ -110,10 +130,12 @@ export default class WorldMapScene extends Phaser.Scene {
 
         const selectedLevel = levels[this.selectedIndex];
 
+        // Si le niveau est verrouillé, on ignore la validation.
         if (!this.isLevelUnlocked(selectedLevel.id)) {
             return;
         }
 
+        // On mémorise le niveau choisi, puis BriefingScene ira le lire dans GameState.
         gameState.setCurrentLevel(selectedLevel.id);
         this.scene.start('BriefingScene');
     }
@@ -139,12 +161,12 @@ export default class WorldMapScene extends Phaser.Scene {
     }
 
     isLevelUnlocked(levelId) {
-        // On essaie d’abord d’utiliser une méthode propre si elle existe.
+        // Méthode normale depuis GameState.
         if (typeof gameState.isLevelUnlocked === 'function') {
             return gameState.isLevelUnlocked(levelId);
         }
 
-        // Sinon, fallback selon la structure probable de GameState.
+        // Fallbacks de sécurité, au cas où GameState évoluerait.
         if (Array.isArray(gameState.unlockedLevels)) {
             return gameState.unlockedLevels.includes(levelId);
         }
@@ -153,7 +175,11 @@ export default class WorldMapScene extends Phaser.Scene {
             return levelId <= gameState.highestUnlockedLevel;
         }
 
-        // Sécurité pour l’étape 1 : au minimum, le niveau 1 est jouable.
+        if (typeof gameState.unlockedLevel === 'number') {
+            return levelId <= gameState.unlockedLevel;
+        }
+
+        // Sécurité minimale : le niveau 1 doit toujours rester jouable.
         return levelId === 1;
     }
 
@@ -208,29 +234,9 @@ export default class WorldMapScene extends Phaser.Scene {
     }
 
     isConfirmPressed() {
-        const keyboardPressed =
-            Phaser.Input.Keyboard.JustDown(this.keys.enter) ||
-            Phaser.Input.Keyboard.JustDown(this.keys.space);
-
-        const gamepadPressed =
-            this.wasGamepadButtonPressed(0) || // A
-            this.wasGamepadButtonPressed(9);   // Start
-
-        return keyboardPressed || gamepadPressed;
-    }
-
-    areMenuInputsReleased() {
-        const keyboardReleased =
-            !this.keys.enter.isDown &&
-            !this.keys.space.isDown;
-
-        const gamepadReleased =
-            !this.isGamepadButtonDown(0) &&  // A
-            !this.isGamepadButtonDown(9) &&  // Start
-            !this.isGamepadButtonDown(12) && // D-Pad haut
-            !this.isGamepadButtonDown(13);   // D-Pad bas
-
-        return keyboardReleased && gamepadReleased;
+        // La validation passe maintenant uniquement par MenuInputGuard.
+        // Cela harmonise Espace / Entrée avec A / Start et évite les validations en cascade.
+        return this.inputGuard.isPressed();
     }
 
     isGamepadButtonDown(buttonIndex) {
@@ -260,8 +266,6 @@ export default class WorldMapScene extends Phaser.Scene {
 
     saveCurrentGamepadButtons() {
         this.previousGamepadButtons = {
-            0: this.isGamepadButtonDown(0),   // A
-            9: this.isGamepadButtonDown(9),   // Start
             12: this.isGamepadButtonDown(12), // D-Pad haut
             13: this.isGamepadButtonDown(13)  // D-Pad bas
         };

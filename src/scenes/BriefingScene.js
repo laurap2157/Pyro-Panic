@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 
 import { levels } from '../data/levels.js';
 import gameState from '../systems/GameState.js';
+import MenuInputGuard from '../systems/MenuInputGuard.js';
 
 export default class BriefingScene extends Phaser.Scene {
     constructor() {
@@ -49,92 +50,29 @@ export default class BriefingScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Touches clavier permettant de lancer le niveau.
+        // Ici, on conserve Espace parce qu'on est encore dans un écran de menu,
+        // pas dans l'écran de victoire qui suit un tir maintenu.
         this.continueKeys = this.input.keyboard.addKeys({
             space: 'SPACE',
             enter: 'ENTER'
         });
 
-        // On bloque d'abord la validation.
-        // Cela évite que l'appui qui a servi à sélectionner un niveau
-        // sur la carte lance immédiatement le niveau sans laisser lire le briefing.
-        this.canStartLevel = false;
-
-        // Sert à détecter un nouvel appui manette, et pas un bouton déjà maintenu.
-        this.previousGamepadButtons = {};
+        // MenuInputGuard empêche le briefing d'être validé automatiquement
+        // par la touche ou le bouton qui a servi à sélectionner le niveau sur la carte.
+        this.inputGuard = new MenuInputGuard(
+            this,
+            this.continueKeys,
+            [0, 9] // A, Start
+        );
     }
 
     update() {
-        // Étape 1 : attendre que les touches/boutons soient relâchés.
-        if (!this.canStartLevel) {
-            if (this.areContinueInputsReleased()) {
-                this.canStartLevel = true;
-                this.saveCurrentGamepadButtons();
-            }
+        this.inputGuard.updateReleaseState();
 
-            return;
-        }
-
-        // Étape 2 : accepter uniquement un nouvel appui volontaire.
-        if (this.isContinuePressed()) {
+        if (this.inputGuard.isPressed()) {
             this.scene.start(this.level.key);
         }
 
-        this.saveCurrentGamepadButtons();
-    }
-
-    areContinueInputsReleased() {
-        const keyboardReleased =
-            !this.continueKeys.space.isDown &&
-            !this.continueKeys.enter.isDown;
-
-        const gamepadReleased =
-            !this.isGamepadButtonDown(0) && // A
-            !this.isGamepadButtonDown(9);  // Start
-
-        return keyboardReleased && gamepadReleased;
-    }
-
-    isContinuePressed() {
-        const keyboardPressed =
-            Phaser.Input.Keyboard.JustDown(this.continueKeys.space) ||
-            Phaser.Input.Keyboard.JustDown(this.continueKeys.enter);
-
-        const gamepadPressed =
-            this.wasGamepadButtonPressed(0) || // A
-            this.wasGamepadButtonPressed(9);   // Start
-
-        return keyboardPressed || gamepadPressed;
-    }
-
-    isGamepadButtonDown(buttonIndex) {
-        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-
-        for (const gamepad of gamepads) {
-            if (!gamepad) {
-                continue;
-            }
-
-            const button = gamepad.buttons[buttonIndex];
-
-            if (button && (button.pressed || button.value > 0.5)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    wasGamepadButtonPressed(buttonIndex) {
-        const isDownNow = this.isGamepadButtonDown(buttonIndex);
-        const wasDownBefore = this.previousGamepadButtons[buttonIndex] || false;
-
-        return isDownNow && !wasDownBefore;
-    }
-
-    saveCurrentGamepadButtons() {
-        this.previousGamepadButtons = {
-            0: this.isGamepadButtonDown(0), // A
-            9: this.isGamepadButtonDown(9)  // Start
-        };
+        this.inputGuard.endFrame();
     }
 }
