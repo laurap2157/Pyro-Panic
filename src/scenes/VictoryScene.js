@@ -1,44 +1,74 @@
-import { levels } from '../data/levels.js';
+import * as Phaser from 'phaser';
+
 import gameState from '../systems/GameState.js';
-import Phaser from 'phaser';
+import MenuInputGuard from '../systems/MenuInputGuard.js';
 
 export default class VictoryScene extends Phaser.Scene {
-  constructor() {
-    super('VictoryScene');
-  }
+    constructor() {
+        super('VictoryScene');
+    }
 
-  create() {
-    const { width, height } = this.scale;
-    const level = levels.find(l => l.id === gameState.currentLevelId);
+    create() {
+        // =====================================================
+        // 1. Mise à jour de l'état global après victoire
+        // =====================================================
+        // On enregistre que le dernier niveau joué a été réussi.
+        gameState.setLastResult('victory');
 
-    this.cameras.main.setBackgroundColor('#132a13');
+        // On débloque le niveau suivant à partir du niveau courant.
+        // Exemple : si currentLevelId vaut 1, le niveau 2 devient accessible.
+        gameState.unlockNextLevel();
 
-    gameState.setLastResult('victory');
-    gameState.unlockNextLevel();
+        // =====================================================
+        // 2. Affichage de l'écran de victoire
+        // =====================================================
+        this.add.text(640, 260, 'Incendie maîtrisé', {
+            fontFamily: 'monospace',
+            fontSize: '42px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
 
-    this.add.text(width / 2, 120, 'Niveau maîtrisé', {
-      fontSize: '44px',
-      color: '#ffffff'
-    }).setOrigin(0.5);
+        this.add.text(640, 340, 'Relâchez les touches, puis appuyez sur A / Start / Entrée / Espace pour continuer', {
+            fontFamily: 'monospace',
+            fontSize: '20px',
+            color: '#cccccc'
+        }).setOrigin(0.5);
 
-    this.add.text(width / 2, 230, level ? level.name : 'Niveau inconnu', {
-      fontSize: '32px',
-      color: '#ffd166'
-    }).setOrigin(0.5);
+        // =====================================================
+        // 3. Inputs de validation
+        // =====================================================
+        // On rétablit SPACE comme touche de validation pour garder la cohérence
+        // avec les autres écrans de menu.
+        //
+        // La sécurité anti-skip est désormais assurée par MenuInputGuard :
+        // - délai court au démarrage ;
+        // - attente du relâchement complet ;
+        // - validation uniquement sur nouvel appui.
+        this.continueKeys = this.input.keyboard.addKeys({
+            space: 'SPACE',
+            enter: 'ENTER'
+        });
 
-    this.add.text(width / 2, 340, 'Incendie contenu. Aucun foyer critique restant.', {
-      fontSize: '24px',
-      color: '#d8f3dc',
-      wordWrap: { width: 900 }
-    }).setOrigin(0.5);
+        this.inputGuard = new MenuInputGuard(
+            this,
+            this.continueKeys,
+            [0, 9] // A, Start
+        );
+    }
 
-    this.add.text(width / 2, 520, 'Entrée / Espace / E pour retourner à la carte', {
-      fontSize: '22px',
-      color: '#cccccc'
-    }).setOrigin(0.5);
+    update() {
+        // On met à jour l'état du garde d'input.
+        // Tant que les touches/boutons surveillés ne sont pas relâchés,
+        // isPressed() restera bloqué.
+        this.inputGuard.updateReleaseState();
 
-    this.input.keyboard.on('keydown-ENTER', () => this.scene.start('WorldMapScene'));
-    this.input.keyboard.on('keydown-SPACE', () => this.scene.start('WorldMapScene'));
-    this.input.keyboard.on('keydown-E', () => this.scene.start('WorldMapScene'));
-  }
+        // Une fois les inputs relâchés, un nouvel appui permet de revenir à la carte.
+        if (this.inputGuard.isPressed()) {
+            this.scene.start('WorldMapScene');
+        }
+
+        // On mémorise l'état courant des touches/boutons pour détecter
+        // correctement les nouveaux appuis à la frame suivante.
+        this.inputGuard.endFrame();
+    }
 }

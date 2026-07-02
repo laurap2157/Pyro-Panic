@@ -1,25 +1,50 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
+
+import MenuInputGuard from '../systems/MenuInputGuard.js';
 
 export default class TitleScene extends Phaser.Scene {
-  constructor() {
-    super('TitleScene');
-  }
+    constructor() {
+        super('TitleScene');
+    }
 
-  create() {
-    const { width, height } = this.scale;
+    create() {
+        this.add.text(640, 250, 'PYRO PANIC', {
+            fontFamily: 'monospace',
+            fontSize: '64px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
 
-    this.add.text(width / 2, height / 2 - 40, "Pyro Panic", {
-      fontSize: '48px',
-      color: '#ffffff'
-    }).setOrigin(0.5);
+        this.add.text(640, 320, "Devil's Spark", {
+            fontFamily: 'monospace',
+            fontSize: '28px',
+            color: '#ffcc66'
+        }).setOrigin(0.5);
 
-    this.add.text(width / 2, height / 2 + 30, "Entrée / Espace / E pour commencer", {
-      fontSize: '24px',
-      color: '#ffcc66'
-    }).setOrigin(0.5);
+        this.add.text(640, 470, 'Appuyez sur A / Start / Entrée / Espace', {
+            fontFamily: 'monospace',
+            fontSize: '24px',
+            color: '#cccccc'
+        }).setOrigin(0.5);
 
-    this.input.keyboard.on('keydown-ENTER', () => this.scene.start('WorldMapScene'));
-    this.input.keyboard.on('keydown-SPACE', () => this.scene.start('WorldMapScene'));
-    this.input.keyboard.on('keydown-E', () => this.scene.start('WorldMapScene'));
-  }
+        this.startKeys = this.input.keyboard.addKeys({
+            space: 'SPACE',
+            enter: 'ENTER'
+        });
+
+        this.inputGuard = new MenuInputGuard(
+            this,
+            this.startKeys,
+            [0, 9] // A, Start
+        );
+    }
+
+    update() {
+        this.inputGuard.updateReleaseState();
+
+        if (this.inputGuard.isPressed()) {
+            this.scene.start('WorldMapScene');
+        }
+
+        this.inputGuard.endFrame();
+    }
 }
