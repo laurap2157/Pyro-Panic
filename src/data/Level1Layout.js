@@ -4,7 +4,8 @@ export const level1Layout = {
   fires: [
     { x: 490, y: 345, size: 'small', type: 'normal' },
     { x: 900, y: 210, size: 'small', type: 'normal' },
-    { x: 1045, y: 555, size: 'large', type: 'normal' }
+    { x: 1045, y: 555, size: 'large', type: 'normal' },
+    { x: 1300, y: 650, size: 'large', type: 'normal' }
   ],
 
   obstacles: [

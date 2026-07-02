@@ -33,7 +33,7 @@ export default class Level1Scene extends Phaser.Scene {
 
     this.load.spritesheet('fire-large', 'assets/sprites/fire_large.png', {
         frameWidth: 32,
-        frameHeight: 32,
+        frameHeight: 45,
     });
   }
 
