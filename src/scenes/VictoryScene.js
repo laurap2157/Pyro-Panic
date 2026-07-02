@@ -1,44 +1,118 @@
-import { levels } from '../data/levels.js';
-import gameState from '../systems/GameState.js';
 import * as Phaser from 'phaser';
 
+import gameState from '../systems/GameState.js';
+
 export default class VictoryScene extends Phaser.Scene {
-  constructor() {
-    super('VictoryScene');
-  }
+    constructor() {
+        super('VictoryScene');
+    }
 
-  create() {
-    const { width, height } = this.scale;
-    const level = levels.find(l => l.id === gameState.currentLevelId);
+    create() {
+        // On enregistre la victoire dans l’état global.
+        gameState.setLastResult('victory');
 
-    this.cameras.main.setBackgroundColor('#132a13');
+        // On débloque le niveau suivant.
+        // Exemple : après le niveau 1, le niveau 2 devient disponible sur la carte.
+        gameState.unlockNextLevel();
 
-    gameState.setLastResult('victory');
-    gameState.unlockNextLevel();
+        this.add.text(640, 260, 'Incendie maîtrisé', {
+            fontFamily: 'monospace',
+            fontSize: '42px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
 
-    this.add.text(width / 2, 120, 'Niveau maîtrisé', {
-      fontSize: '44px',
-      color: '#ffffff'
-    }).setOrigin(0.5);
+        this.add.text(640, 340, 'Relâchez les touches, puis appuyez sur A / Entrée pour continuer', {
+            fontFamily: 'monospace',
+            fontSize: '20px',
+            color: '#cccccc'
+        }).setOrigin(0.5);
 
-    this.add.text(width / 2, 230, level ? level.name : 'Niveau inconnu', {
-      fontSize: '32px',
-      color: '#ffd166'
-    }).setOrigin(0.5);
+        this.continueKeys = this.input.keyboard.addKeys({
+            space: 'SPACE',
+            enter: 'ENTER'
+        });
 
-    this.add.text(width / 2, 340, 'Incendie contenu. Aucun foyer critique restant.', {
-      fontSize: '24px',
-      color: '#d8f3dc',
-      wordWrap: { width: 900 }
-    }).setOrigin(0.5);
+        // On bloque d'abord la validation.
+        // Cela évite que le tir maintenu dans le niveau précédent
+        // valide automatiquement l’écran de victoire.
+        this.canContinue = false;
 
-    this.add.text(width / 2, 520, 'Entrée / Espace / E pour retourner à la carte', {
-      fontSize: '22px',
-      color: '#cccccc'
-    }).setOrigin(0.5);
+        // Sert à détecter un nouvel appui manette.
+        this.previousGamepadButtons = {};
+    }
 
-    this.input.keyboard.on('keydown-ENTER', () => this.scene.start('WorldMapScene'));
-    this.input.keyboard.on('keydown-SPACE', () => this.scene.start('WorldMapScene'));
-    this.input.keyboard.on('keydown-E', () => this.scene.start('WorldMapScene'));
-  }
+    update() {
+        // Étape 1 : attendre que toutes les touches/boutons soient relâchés.
+        if (!this.canContinue) {
+            if (this.areContinueInputsReleased()) {
+                this.canContinue = true;
+                this.saveCurrentGamepadButtons();
+            }
+
+            return;
+        }
+
+        // Étape 2 : accepter uniquement un nouvel appui volontaire.
+        if (this.isContinuePressed()) {
+            this.scene.start('WorldMapScene');
+        }
+
+        this.saveCurrentGamepadButtons();
+    }
+
+    areContinueInputsReleased() {
+        const keyboardReleased =
+            !this.continueKeys.space.isDown &&
+            !this.continueKeys.enter.isDown;
+
+        const gamepadReleased =
+            !this.isGamepadButtonDown(0) && // A
+            !this.isGamepadButtonDown(9);  // Start
+
+        return keyboardReleased && gamepadReleased;
+    }
+
+    isContinuePressed() {
+        const keyboardPressed =
+            Phaser.Input.Keyboard.JustDown(this.continueKeys.space) ||
+            Phaser.Input.Keyboard.JustDown(this.continueKeys.enter);
+
+        const gamepadPressed =
+            this.wasGamepadButtonPressed(0) || // A
+            this.wasGamepadButtonPressed(9);   // Start
+
+        return keyboardPressed || gamepadPressed;
+    }
+
+    isGamepadButtonDown(buttonIndex) {
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+
+        for (const gamepad of gamepads) {
+            if (!gamepad) {
+                continue;
+            }
+
+            const button = gamepad.buttons[buttonIndex];
+
+            if (button && (button.pressed || button.value > 0.5)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    wasGamepadButtonPressed(buttonIndex) {
+        const isDownNow = this.isGamepadButtonDown(buttonIndex);
+        const wasDownBefore = this.previousGamepadButtons[buttonIndex] || false;
+
+        return isDownNow && !wasDownBefore;
+    }
+
+    saveCurrentGamepadButtons() {
+        this.previousGamepadButtons = {
+            0: this.isGamepadButtonDown(0), // A
+            9: this.isGamepadButtonDown(9)  // Start
+        };
+    }
 }

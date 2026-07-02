@@ -21,7 +21,7 @@ export default class ExtinguishSystem {
     } else if (fire.size === "medium") {
       efficiency = power === "strong" ? 1.3 : 0.6;
     } else if (fire.size === "large") {
-      efficiency = power === "strong" ? 1.0 : 0.1;
+      efficiency = power === "strong" ? 2.0 : 0.08;
     }
 
     if (fire.type === "fuel" && agent === "foam") {
