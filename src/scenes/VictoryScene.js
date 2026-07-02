@@ -9,35 +9,46 @@ export default class VictoryScene extends Phaser.Scene {
     }
 
     create() {
-        // On enregistre la victoire dans l’état global.
+        // =====================================================
+        // 1. Mise à jour de l'état global après victoire
+        // =====================================================
+        // On enregistre que le dernier niveau joué a été réussi.
         gameState.setLastResult('victory');
 
-        // On débloque le niveau suivant.
-        // Exemple : après le niveau 1, le niveau 2 devient disponible sur la carte.
+        // On débloque le niveau suivant à partir du niveau courant.
+        // Exemple : si currentLevelId vaut 1, le niveau 2 devient accessible.
         gameState.unlockNextLevel();
 
+        // =====================================================
+        // 2. Affichage de l'écran de victoire
+        // =====================================================
         this.add.text(640, 260, 'Incendie maîtrisé', {
             fontFamily: 'monospace',
             fontSize: '42px',
             color: '#ffffff'
         }).setOrigin(0.5);
 
-        this.add.text(640, 340, 'Relâchez les touches, puis appuyez sur A / Entrée pour continuer', {
+        this.add.text(640, 340, 'Relâchez les touches, puis appuyez sur A / Start / Entrée / Espace pour continuer', {
             fontFamily: 'monospace',
             fontSize: '20px',
             color: '#cccccc'
         }).setOrigin(0.5);
 
-        // Important :
-        // On ne met pas SPACE ici.
-        // Espace sert déjà au tir dans Level1Scene.
-        // L’utiliser aussi comme validation d’écran peut provoquer un skip automatique.
+        // =====================================================
+        // 3. Inputs de validation
+        // =====================================================
+        // On rétablit SPACE comme touche de validation pour garder la cohérence
+        // avec les autres écrans de menu.
+        //
+        // La sécurité anti-skip est désormais assurée par MenuInputGuard :
+        // - délai court au démarrage ;
+        // - attente du relâchement complet ;
+        // - validation uniquement sur nouvel appui.
         this.continueKeys = this.input.keyboard.addKeys({
+            space: 'SPACE',
             enter: 'ENTER'
         });
 
-        // MenuInputGuard bloque la validation tant que les touches/boutons
-        // ne sont pas relâchés, puis accepte seulement un nouvel appui.
         this.inputGuard = new MenuInputGuard(
             this,
             this.continueKeys,
@@ -46,12 +57,18 @@ export default class VictoryScene extends Phaser.Scene {
     }
 
     update() {
+        // On met à jour l'état du garde d'input.
+        // Tant que les touches/boutons surveillés ne sont pas relâchés,
+        // isPressed() restera bloqué.
         this.inputGuard.updateReleaseState();
 
+        // Une fois les inputs relâchés, un nouvel appui permet de revenir à la carte.
         if (this.inputGuard.isPressed()) {
             this.scene.start('WorldMapScene');
         }
 
+        // On mémorise l'état courant des touches/boutons pour détecter
+        // correctement les nouveaux appuis à la frame suivante.
         this.inputGuard.endFrame();
     }
 }
