@@ -16,8 +16,8 @@ import * as Phaser from 'phaser';
 
 const gameConfig = {
   type: Phaser.AUTO,
-  width: 1280,
-  height: 720,
+  width: 1376,
+  height: 768,
   backgroundColor: '#101018',
   parent: 'app',
   scene: [
