@@ -2,6 +2,9 @@ const PLAYER_SPEED = 220;
 const DEFAULT_AIM_X = 1;
 const DEFAULT_AIM_Y = 0;
 
+const PLAYER_WIDTH = 32;
+const PLAYER_HEIGHT = 32;
+
 export default class Player {
     constructor(scene, x, y) {
         this.scene = scene;
@@ -11,9 +14,13 @@ export default class Player {
         this.lastAimX = DEFAULT_AIM_X;
         this.lastAimY = DEFAULT_AIM_Y;
 
-        this.sprite = scene.add.rectangle(x, y, 32, 32, 0x2f6fdd);
+        // Placeholder visuel actuel.
+        // Plus tard, ce rectangle pourra être remplacé par un sprite animé,
+        // mais le contrat public de Player devra rester le même.
+        this.sprite = scene.add.rectangle(x, y, PLAYER_WIDTH, PLAYER_HEIGHT, 0x2f6fdd);
         this.sprite.setStrokeStyle(2, 0xffffff);
 
+        // Ligne de visée temporaire.
         this.aimLine = scene.add.line(
             0,
             0,
@@ -28,17 +35,45 @@ export default class Player {
         this.updateAimLine();
     }
 
-    update(inputState, delta) {
+    update(inputState, delta, collisionSystem = null) {
         const deltaInSeconds = delta / 1000;
 
-        this.move(inputState, deltaInSeconds);
+        this.move(inputState, deltaInSeconds, collisionSystem);
         this.updateAim(inputState);
         this.updateAimLine();
     }
 
-    move(inputState, deltaInSeconds) {
-        this.sprite.x += inputState.moveX * this.speed * deltaInSeconds;
-        this.sprite.y += inputState.moveY * this.speed * deltaInSeconds;
+    move(inputState, deltaInSeconds, collisionSystem = null) {
+        const deltaX = inputState.moveX * this.speed * deltaInSeconds;
+        const deltaY = inputState.moveY * this.speed * deltaInSeconds;
+
+        // Si aucun système de collision n'est fourni,
+        // on garde le comportement précédent.
+        if (!collisionSystem) {
+            this.sprite.x += deltaX;
+            this.sprite.y += deltaY;
+
+            this.keepInsideScreen();
+            return;
+        }
+
+        // Si un système de collision est fourni,
+        // on convertit la position du joueur en hitbox rectangulaire.
+        const currentHitbox = this.getHitbox();
+
+        // Le CollisionSystem retourne une hitbox corrigée.
+        // Il gère notamment le déplacement axe X puis axe Y
+        // pour permettre au joueur de glisser le long des murs.
+        const resolvedHitbox = collisionSystem.resolveMovement(
+            currentHitbox,
+            deltaX,
+            deltaY
+        );
+
+        // La hitbox utilise x/y en coin haut-gauche.
+        // Le sprite Phaser utilise x/y au centre.
+        this.sprite.x = resolvedHitbox.x + resolvedHitbox.width / 2;
+        this.sprite.y = resolvedHitbox.y + resolvedHitbox.height / 2;
 
         this.keepInsideScreen();
     }
@@ -65,16 +100,26 @@ export default class Player {
     }
 
     keepInsideScreen() {
-        const halfSize = 16;
+        const halfWidth = PLAYER_WIDTH / 2;
+        const halfHeight = PLAYER_HEIGHT / 2;
 
-        this.sprite.x = Math.max(halfSize, Math.min(1280 - halfSize, this.sprite.x));
-        this.sprite.y = Math.max(halfSize, Math.min(720 - halfSize, this.sprite.y));
+        this.sprite.x = Math.max(halfWidth, Math.min(1280 - halfWidth, this.sprite.x));
+        this.sprite.y = Math.max(halfHeight, Math.min(720 - halfHeight, this.sprite.y));
     }
 
     getPosition() {
         return {
             x: this.sprite.x,
             y: this.sprite.y
+        };
+    }
+
+    getHitbox() {
+        return {
+            x: this.sprite.x - PLAYER_WIDTH / 2,
+            y: this.sprite.y - PLAYER_HEIGHT / 2,
+            width: PLAYER_WIDTH,
+            height: PLAYER_HEIGHT
         };
     }
 
