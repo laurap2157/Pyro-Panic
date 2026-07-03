@@ -7,193 +7,163 @@ const PLAYER_HEIGHT = 32;
 const PLAYER_DISPLAY_SIZE = 64;
 
 export default class Player {
-    constructor(scene, x, y) {
-        this.scene = scene;
+  constructor(scene, x, y) {
+    this.scene = scene;
 
-        this.speed = PLAYER_SPEED;
+    this.speed = PLAYER_SPEED;
 
-        this.lastAimX = DEFAULT_AIM_X;
-        this.lastAimY = DEFAULT_AIM_Y;
+    this.lastAimX = DEFAULT_AIM_X;
+    this.lastAimY = DEFAULT_AIM_Y;
 
-        this.hasAnimatedSprite = scene.textures.exists('pompier');
+    this.hasAnimatedSprite = scene.textures.exists('pompier');
 
-        if (this.hasAnimatedSprite) {
-            this.sprite = scene.add.sprite(x, y, 'pompier', 0);
-            this.sprite.setDisplaySize(PLAYER_DISPLAY_SIZE, PLAYER_DISPLAY_SIZE);
-            this.sprite.setDepth(3);
-            this.screenHalfWidth = this.sprite.displayWidth / 2;
-            this.screenHalfHeight = this.sprite.displayHeight / 2;
-        } else {
-            this.sprite = scene.add.rectangle(x, y, PLAYER_WIDTH, PLAYER_HEIGHT, 0x2f6fdd);
-            this.sprite.setStrokeStyle(2, 0xffffff);
-            this.screenHalfWidth = PLAYER_WIDTH / 2;
-            this.screenHalfHeight = PLAYER_HEIGHT / 2;
-        }
-
-        this.aimLine = scene.add.line(
-            0,
-            0,
-            0,
-            0,
-            48,
-            0,
-            0xffcc66
-        );
-
-        this.aimLine.setOrigin(0, 0);
-        this.aimLine.setDepth(4);
-        this.updateAimLine();
+    if (this.hasAnimatedSprite) {
+      this.sprite = scene.add.sprite(x, y, 'pompier', 0);
+      this.sprite.setDisplaySize(PLAYER_DISPLAY_SIZE, PLAYER_DISPLAY_SIZE);
+      this.sprite.setDepth(3);
+      this.screenHalfWidth = this.sprite.displayWidth / 2;
+      this.screenHalfHeight = this.sprite.displayHeight / 2;
+    } else {
+      this.sprite = scene.add.rectangle(
+        x,
+        y,
+        PLAYER_WIDTH,
+        PLAYER_HEIGHT,
+        0x2f6fdd,
+      );
+      this.sprite.setStrokeStyle(2, 0xffffff);
+      this.screenHalfWidth = PLAYER_WIDTH / 2;
+      this.screenHalfHeight = PLAYER_HEIGHT / 2;
     }
 
-    update(inputState, delta, collisionSystem = null) {
-        const deltaInSeconds = delta / 1000;
+    // Remplacement de la ligne par le sprite du jet d'eau
+    this.waterJet = scene.add.sprite(0, 0, 'water-jet');
+    this.waterJet.setOrigin(0, 0.5);
+    this.waterJet.setDepth(4);
 
-        this.move(inputState, deltaInSeconds, collisionSystem);
-        this.updateAim(inputState);
-        this.updateAimLine();
-        this.updateAnimation(inputState);
+    this.updateAimLine();
+  }
+
+  update(inputState, delta, collisionSystem = null) {
+    const deltaInSeconds = delta / 1000;
+
+    this.move(inputState, deltaInSeconds, collisionSystem);
+    this.updateAim(inputState);
+    this.updateAimLine();
+    this.updateAnimation(inputState);
+  }
+
+  move(inputState, deltaInSeconds, collisionSystem = null) {
+    const deltaX = inputState.moveX * this.speed * deltaInSeconds;
+    const deltaY = inputState.moveY * this.speed * deltaInSeconds;
+
+    if (!collisionSystem) {
+      this.sprite.x += deltaX;
+      this.sprite.y += deltaY;
+
+      this.keepInsideScreen();
+      return;
     }
 
-    move(inputState, deltaInSeconds, collisionSystem = null) {
-        const deltaX = inputState.moveX * this.speed * deltaInSeconds;
-        const deltaY = inputState.moveY * this.speed * deltaInSeconds;
+    const currentHitbox = this.getHitbox();
+    const resolvedHitbox = collisionSystem.resolveMovement(
+      currentHitbox,
+      deltaX,
+      deltaY,
+    );
 
-        if (!collisionSystem) {
-            this.sprite.x += deltaX;
-            this.sprite.y += deltaY;
+    this.sprite.x = resolvedHitbox.x + resolvedHitbox.width / 2;
+    this.sprite.y = resolvedHitbox.y + resolvedHitbox.height / 2;
 
-            this.keepInsideScreen();
-            return;
-        }
+    this.keepInsideScreen();
+  }
 
-        const currentHitbox = this.getHitbox();
-        const resolvedHitbox = collisionSystem.resolveMovement(
-            currentHitbox,
-            deltaX,
-            deltaY
-        );
+  updateAim(inputState) {
+    const aimLength = Math.hypot(inputState.aimX, inputState.aimY);
 
-        this.sprite.x = resolvedHitbox.x + resolvedHitbox.width / 2;
-        this.sprite.y = resolvedHitbox.y + resolvedHitbox.height / 2;
+    if (aimLength > 0) {
+      this.lastAimX = inputState.aimX / aimLength;
+      this.lastAimY = inputState.aimY / aimLength;
+    }
+  }
 
-        this.keepInsideScreen();
+  updateAnimation(inputState) {
+    if (!this.hasAnimatedSprite) {
+      return;
     }
 
-    updateAim(inputState) {
-        const aimLength = Math.hypot(inputState.aimX, inputState.aimY);
-
-        if (aimLength > 0) {
-            this.lastAimX = inputState.aimX / aimLength;
-            this.lastAimY = inputState.aimY / aimLength;
-        }
+    if (inputState.moveX === 0 && inputState.moveY === 0) {
+      this.sprite.anims.stop();
+      return;
     }
 
-    updateAnimation(inputState) {
-        if (!this.hasAnimatedSprite) {
-            return;
-        }
+    const animationKey = this.getAnimationKey(inputState);
 
-        if (inputState.moveX === 0 && inputState.moveY === 0) {
-            this.sprite.anims.stop();
-            return;
-        }
-
-        const animationKey = this.getAnimationKey(inputState);
-
-        if (this.scene.anims.exists(animationKey)) {
-            this.sprite.play(animationKey, true);
-        }
+    if (this.scene.anims.exists(animationKey)) {
+      this.sprite.play(animationKey, true);
     }
+  }
 
-    getAnimationKey(inputState) {
-        if (inputState.moveX < 0 && inputState.moveY < 0) {
-            return 'pompier-diag-haut-gauche';
-        }
+  getAnimationKey(inputState) {
+    if (inputState.moveX < 0 && inputState.moveY < 0)
+      return 'pompier-diag-haut-gauche';
+    if (inputState.moveX > 0 && inputState.moveY < 0)
+      return 'pompier-diag-haut-droite';
+    if (inputState.moveX < 0 && inputState.moveY > 0)
+      return 'pompier-diag-bas-gauche';
+    if (inputState.moveX > 0 && inputState.moveY > 0)
+      return 'pompier-diag-bas-droite';
+    if (inputState.moveY < 0) return 'pompier-dos';
+    if (inputState.moveY > 0) return 'pompier-face';
+    if (inputState.moveX < 0) return 'pompier-gauche';
+    return 'pompier-droite';
+  }
 
-        if (inputState.moveX > 0 && inputState.moveY < 0) {
-            return 'pompier-diag-haut-droite';
-        }
+  updateAimLine() {
+    this.waterJet.x = this.sprite.x;
+    this.waterJet.y = this.sprite.y;
 
-        if (inputState.moveX < 0 && inputState.moveY > 0) {
-            return 'pompier-diag-bas-gauche';
-        }
+    const angle = Math.atan2(this.lastAimY, this.lastAimX);
+    this.waterJet.setRotation(angle);
+  }
 
-        if (inputState.moveX > 0 && inputState.moveY > 0) {
-            return 'pompier-diag-bas-droite';
-        }
+  keepInsideScreen() {
+    const halfWidth = this.screenHalfWidth;
+    const halfHeight = this.screenHalfHeight;
+    const sceneWidth = this.scene.scale.width;
+    const sceneHeight = this.scene.scale.height;
 
-        if (inputState.moveY < 0) {
-            return 'pompier-dos';
-        }
+    this.sprite.x = Math.max(
+      halfWidth,
+      Math.min(sceneWidth - halfWidth, this.sprite.x),
+    );
+    this.sprite.y = Math.max(
+      halfHeight,
+      Math.min(sceneHeight - halfHeight, this.sprite.y),
+    );
+  }
 
-        if (inputState.moveY > 0) {
-            return 'pompier-face';
-        }
+  getPosition() {
+    return { x: this.sprite.x, y: this.sprite.y };
+  }
 
-        if (inputState.moveX < 0) {
-            return 'pompier-gauche';
-        }
+  getHitbox() {
+    return {
+      x: this.sprite.x - PLAYER_WIDTH / 2,
+      y: this.sprite.y - PLAYER_HEIGHT / 2,
+      width: PLAYER_WIDTH,
+      height: PLAYER_HEIGHT,
+    };
+  }
 
-        return 'pompier-droite';
-    }
+  getAimDirection() {
+    return { x: this.lastAimX, y: this.lastAimY };
+  }
 
-    updateAimLine() {
-        this.aimLine.x = this.sprite.x;
-        this.aimLine.y = this.sprite.y;
-
-        this.aimLine.setTo(
-            0,
-            0,
-            this.lastAimX * 48,
-            this.lastAimY * 48
-        );
-    }
-
-    keepInsideScreen() {
-        const halfWidth = this.screenHalfWidth;
-        const halfHeight = this.screenHalfHeight;
-
-        const sceneWidth = this.scene.scale.width;
-        const sceneHeight = this.scene.scale.height;
-
-        this.sprite.x = Math.max(
-            halfWidth,
-            Math.min(sceneWidth - halfWidth, this.sprite.x)
-        );
-
-        this.sprite.y = Math.max(
-            halfHeight,
-            Math.min(sceneHeight - halfHeight, this.sprite.y)
-        );
-    }
-
-    getPosition() {
-        return {
-            x: this.sprite.x,
-            y: this.sprite.y
-        };
-    }
-
-    getHitbox() {
-        return {
-            x: this.sprite.x - PLAYER_WIDTH / 2,
-            y: this.sprite.y - PLAYER_HEIGHT / 2,
-            width: PLAYER_WIDTH,
-            height: PLAYER_HEIGHT
-        };
-    }
-
-    getAimDirection() {
-        return {
-            x: this.lastAimX,
-            y: this.lastAimY
-        };
-    }
-
-    getSprayOrigin() {
-        return {
-            x: this.sprite.x + this.lastAimX * 24,
-            y: this.sprite.y + this.lastAimY * 24
-        };
-    }
+  getSprayOrigin() {
+    return {
+      x: this.sprite.x + this.lastAimX * 24,
+      y: this.sprite.y + this.lastAimY * 24,
+    };
+  }
 }
