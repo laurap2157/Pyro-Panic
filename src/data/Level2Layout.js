@@ -2,7 +2,13 @@ export const level2Layout = {
   playerSpawn: { x: 70, y: 360 },
 
   fires: [
-    { x: 100, y: 200, size: 'small', type: 'normal' }
+    { x: 360, y: 430, size: 'small', type: 'normal' },
+    { x: 735, y: 560, size: 'small', type: 'normal' },
+    { x: 960, y: 455, size: 'large', type: 'normal' },
+    { x: 1185, y: 585, size: 'large', type: 'normal' },
+
+    // feu caché derrière une porte, à gérer plus tard avec la porte ouverte
+    { x: 855, y: 250, size: 'large', type: 'hidden_door_fire' }
   ],
 
   doors: [
