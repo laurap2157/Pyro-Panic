@@ -1,26 +1,93 @@
 export const level2Layout = {
   playerSpawn: { x: 70, y: 360 },
 
+  // =====================================================
+  // 1. Feux visibles dès le début du niveau
+  // =====================================================
+  // Ces feux font partie de la pièce principale.
+  // Ils sont visibles, touchables et comptent immédiatement
+  // dans la condition de victoire.
   fires: [
     { x: 360, y: 430, size: 'small', type: 'normal' },
     { x: 735, y: 560, size: 'small', type: 'normal' },
     { x: 960, y: 455, size: 'large', type: 'normal' },
     { x: 1185, y: 585, size: 'large', type: 'normal' },
-
-    // feu caché derrière une porte, à gérer plus tard avec la porte ouverte
-    { x: 855, y: 250, size: 'large', type: 'hidden_door_fire' }
   ],
 
+  // =====================================================
+  // 2. Feu caché derrière une porte
+  // =====================================================
+  // Ce feu n’est pas créé comme feu actif au début.
+  // Il devient visible et vulnérable uniquement après :
+  // inspection de la bonne porte + arrosage de cette porte.
+  hiddenFires: [
+    {
+      id: 'hidden-fire-door-3',
+      doorId: 'door-3',
+      x: 855,
+      y: 250,
+      size: 'large',
+      type: 'normal',
+    },
+  ],
+
+  // =====================================================
+  // 3. Portes inspectables
+  // =====================================================
+  // Convention :
+  // x/y correspondent au point visuel de la porte dans la scène.
+  // Une seule porte possède hasHiddenFire: true.
   doors: [
-    { x: 200, y: 300, isDangerous: false },
-    { x: 500, y: 150, isDangerous: true }
+    {
+      id: 'door-1',
+      x: 151,
+      y: 262,
+      width: 80,
+      height: 120,
+      hasHiddenFire: false,
+      hiddenFireId: null,
+      label: 'Porte rouge 1',
+    },
+    {
+      id: 'door-2',
+      x: 503,
+      y: 262,
+      width: 80,
+      height: 120,
+      hasHiddenFire: false,
+      hiddenFireId: null,
+      label: 'Porte rouge 2',
+    },
+    {
+      id: 'door-3',
+      x: 857,
+      y: 262,
+      width: 80,
+      height: 120,
+      hasHiddenFire: true,
+      hiddenFireId: 'hidden-fire-door-3',
+      label: 'Porte rouge 3',
+    },
+    {
+      id: 'door-4',
+      x: 1208,
+      y: 262,
+      width: 80,
+      height: 120,
+      hasHiddenFire: false,
+      hiddenFireId: null,
+      label: 'Porte rouge 4',
+    },
   ],
 
+  // =====================================================
+  // 4. Obstacles / collisions
+  // =====================================================
   obstacles: [
     // grand mur du haut
-    { x: 0, y: 0, width: 1366, height: 255, type: 'manor_wall' },
+    { x: 0, y: 0, width: 1376, height: 255, type: 'manor_wall' },
 
-    // portes bloquantes
+    // portes bloquantes / zone haute
     { x: 95, y: 0, width: 112, height: 141, type: 'door_block' },
     { x: 447, y: 0, width: 112, height: 141, type: 'door_block' },
     { x: 801, y: 0, width: 112, height: 141, type: 'door_block' },
@@ -40,20 +107,25 @@ export const level2Layout = {
 
     // zones noires du bas
     { x: 0, y: 710, width: 428, height: 58, type: 'bottom_void_left' },
-    { x: 835, y: 710, width: 531, height: 58, type: 'bottom_void_right' }
+    { x: 835, y: 710, width: 541, height: 58, type: 'bottom_void_right' },
   ],
 
+  // =====================================================
+  // 5. Décorations de repérage
+  // =====================================================
   decorations: [
     { x: 151, y: 262, key: 'door_marker_1' },
     { x: 503, y: 262, key: 'door_marker_2' },
     { x: 857, y: 262, key: 'door_marker_3' },
     { x: 1208, y: 262, key: 'door_marker_4' },
 
-    { x: 180, y: 600, key: 'water_basin_marker' }
+    { x: 180, y: 600, key: 'water_basin_marker' },
   ],
 
+  // =====================================================
+  // 6. Interactifs de recharge en eau
+  // =====================================================
   interactives: [
-    // recharge à gauche du bassin
     {
       x: 36,
       y: 555,
@@ -61,10 +133,8 @@ export const level2Layout = {
       height: 95,
       type: 'water_refill',
       key: 'basin_left',
-      prompt: ''
+      prompt: '',
     },
-
-    // recharge à droite du bassin
     {
       x: 307,
       y: 555,
@@ -72,10 +142,8 @@ export const level2Layout = {
       height: 95,
       type: 'water_refill',
       key: 'basin_right',
-      prompt: ''
+      prompt: '',
     },
-
-    // recharge au-dessus du bassin
     {
       x: 92,
       y: 500,
@@ -83,10 +151,8 @@ export const level2Layout = {
       height: 24,
       type: 'water_refill',
       key: 'basin_top',
-      prompt: ''
+      prompt: '',
     },
-
-    // en dessous du bassin
     {
       x: 95,
       y: 675,
@@ -94,7 +160,7 @@ export const level2Layout = {
       height: 28,
       type: 'water_refill',
       key: 'basin_bottom',
-      prompt: ''
-    }
-  ]
+      prompt: '',
+    },
+  ],
 };
