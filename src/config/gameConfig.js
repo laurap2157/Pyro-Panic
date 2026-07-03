@@ -16,8 +16,17 @@ import * as Phaser from 'phaser';
 
 const gameConfig = {
   type: Phaser.AUTO,
-  width: 1376,
-  height: 768,
+
+  // Résolution logique officielle du projet.
+  // Le canvas s'adapte à l'écran avec Phaser.Scale.FIT,
+  // sans déformer les assets ni changer les coordonnées du jeu.
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: 1376,
+    height: 768,
+  },
+
   backgroundColor: '#101018',
   parent: 'app',
   scene: [

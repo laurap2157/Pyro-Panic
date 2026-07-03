@@ -37,25 +37,34 @@ export default class TitleScene extends Phaser.Scene {
     );
 
     // =====================================================
-    // 2. Instruction de démarrage
+    // 2. Instructions de démarrage
     // =====================================================
     // Le titre et le sous-titre ne sont plus affichés par Phaser :
     // ils sont déjà présents dans l'image.
     this.add.rectangle(
       width / 2,
       height - 72,
-      520,
-      54,
+      620,
+      64,
       0x090b10,
       0.72
     ).setStrokeStyle(2, 0xf7d28a, 0.65);
 
-    this.add.text(width / 2, height - 72, 'A / START / ENTRÉE / ESPACE', {
+    this.add.text(width / 2, height - 82, 'A / START / ENTRÉE / ESPACE', {
       fontFamily: 'monospace',
-      fontSize: '24px',
+      fontSize: '23px',
       color: '#ffffff',
       stroke: '#000000',
       strokeThickness: 4,
+      align: 'center',
+    }).setOrigin(0.5);
+
+    this.add.text(width / 2, height - 54, 'F : PLEIN ÉCRAN', {
+      fontFamily: 'monospace',
+      fontSize: '17px',
+      color: '#f7d28a',
+      stroke: '#000000',
+      strokeThickness: 3,
       align: 'center',
     }).setOrigin(0.5);
 
@@ -67,6 +76,10 @@ export default class TitleScene extends Phaser.Scene {
       enter: 'ENTER',
     });
 
+    this.fullscreenKey = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.F
+    );
+
     this.inputGuard = new MenuInputGuard(
       this,
       this.startKeys,
@@ -77,11 +90,26 @@ export default class TitleScene extends Phaser.Scene {
   update() {
     this.inputGuard.updateReleaseState();
 
+    if (Phaser.Input.Keyboard.JustDown(this.fullscreenKey)) {
+      this.toggleFullscreen();
+    }
+
     if (this.inputGuard.isPressed()) {
       this.scene.start('WorldMapScene');
     }
 
     this.inputGuard.endFrame();
+  }
+
+  toggleFullscreen() {
+    // Les navigateurs exigent une action utilisateur pour lancer le plein écran.
+    // Cette méthode est donc appelée depuis l'appui sur F.
+    if (this.scale.isFullscreen) {
+      this.scale.stopFullscreen();
+      return;
+    }
+
+    this.scale.startFullscreen();
   }
 
   addCoverBackground(textureKey) {
