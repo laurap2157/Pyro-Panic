@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 
 import MenuInputGuard from '../systems/MenuInputGuard.js';
+import ScreenView from '../objects/ScreenView.js';
 
 export default class LevelPlaceholderScene extends Phaser.Scene {
   constructor(sceneKey, levelName) {
@@ -10,51 +11,57 @@ export default class LevelPlaceholderScene extends Phaser.Scene {
   }
 
   create() {
-    const { width, height } = this.scale;
+    this.ui = new ScreenView(this);
 
-    this.add.rectangle(
-      width / 2,
-      height / 2,
-      width,
-      height,
-      0x101018
+    this.ui.drawBackground({
+      accentColor: 0xff8a2a,
+      dangerColor: 0x3a1d1a,
+    });
+
+    this.ui.drawPanel(
+      this.ui.centerX - 450,
+      175,
+      900,
+      360,
+      {
+        fillColor: 0x151a24,
+        strokeColor: 0xff8a2a,
+      }
     );
 
-    this.add.text(width / 2, height / 2 - 120, this.levelName, {
-      fontFamily: 'monospace',
-      fontSize: '42px',
+    this.ui.addSubtitle('MISSION À VENIR', 230, {
+      fontSize: '24px',
+      color: '#ffb35c',
+    });
+
+    this.ui.addTitle(this.levelName, 305, {
+      fontSize: '44px',
       color: '#ffffff',
-    }).setOrigin(0.5);
+    });
 
-    this.add.text(width / 2, height / 2 - 40, 'Niveau en construction', {
-      fontFamily: 'monospace',
-      fontSize: '28px',
-      color: '#ffcc66',
-    }).setOrigin(0.5);
-
-    this.add.text(
-      width / 2,
-      height / 2 + 30,
-      'Cette mission sera implémentée dans une prochaine phase.',
+    this.ui.addBody(
+      'Cette zone est déjà raccordée à la carte, mais son gameplay sera implémenté dans une prochaine phase.',
+      this.ui.centerX,
+      405,
+      760,
       {
-        fontFamily: 'monospace',
         fontSize: '22px',
-        color: '#cccccc',
-        align: 'center',
-        wordWrap: { width: 900 },
+        color: '#d7d7d7',
       }
-    ).setOrigin(0.5);
+    );
 
-    this.add.text(
-      width / 2,
-      height - 80,
-      'A / Start / Entrée / Espace : retour carte',
+    this.ui.addBody(
+      'Le niveau 1 reste la tranche jouable principale du prototype.',
+      this.ui.centerX,
+      480,
+      760,
       {
-        fontFamily: 'monospace',
         fontSize: '20px',
-        color: '#ffffff',
+        color: '#ffcc66',
       }
-    ).setOrigin(0.5);
+    );
+
+    this.ui.addHint('A / Start / Entrée / Espace : retour carte');
 
     this.continueKeys = this.input.keyboard.addKeys({
       space: 'SPACE',

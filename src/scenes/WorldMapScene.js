@@ -3,271 +3,372 @@ import * as Phaser from 'phaser';
 import { levels } from '../data/levels.js';
 import gameState from '../systems/GameState.js';
 import MenuInputGuard from '../systems/MenuInputGuard.js';
+import ScreenView from '../objects/ScreenView.js';
 
 export default class WorldMapScene extends Phaser.Scene {
-    constructor() {
-        super('WorldMapScene');
+  constructor() {
+    super('WorldMapScene');
+  }
+
+  create() {
+    this.ui = new ScreenView(this);
+
+    this.selectedIndex = 0;
+
+    this.ui.drawBackground({
+      accentColor: 0xffcc66,
+      dangerColor: 0x4d1515,
+    });
+
+    this.ui.addTitle('CARTE D’INTERVENTION', 64, {
+      fontSize: '44px',
+      color: '#ffe6a3',
+    });
+
+    this.ui.addSubtitle('Progression opérationnelle', 112, {
+      fontSize: '20px',
+      color: '#cccccc',
+    });
+
+    this.mapGraphics = this.add.graphics();
+
+    this.levelPositions = [
+      { x: 170, y: 430 },
+      { x: 430, y: 315 },
+      { x: 690, y: 450 },
+      { x: 950, y: 315 },
+      { x: 1205, y: 430 },
+    ];
+
+    this.levelLabels = levels.map((level, index) => {
+      const position = this.levelPositions[index];
+
+      return this.add.text(position.x, position.y + 72, '', {
+        fontFamily: 'monospace',
+        fontSize: '17px',
+        color: '#ffffff',
+        align: 'center',
+        wordWrap: { width: 210 },
+      }).setOrigin(0.5);
+    });
+
+    this.statusText = this.add.text(this.ui.centerX, this.ui.height - 118, '', {
+      fontFamily: 'monospace',
+      fontSize: '20px',
+      color: '#ffcc66',
+      align: 'center',
+    }).setOrigin(0.5);
+
+    this.ui.addHint('Stick / Flèches : choisir | A / Start / Entrée / Espace : valider');
+
+    this.keys = this.input.keyboard.addKeys({
+      up: 'UP',
+      down: 'DOWN',
+      left: 'LEFT',
+      right: 'RIGHT',
+      z: 'Z',
+      q: 'Q',
+      s: 'S',
+      d: 'D',
+      enter: 'ENTER',
+      space: 'SPACE',
+    });
+
+    this.inputGuard = new MenuInputGuard(
+      this,
+      {
+        enter: this.keys.enter,
+        space: this.keys.space,
+      },
+      [0, 9] // A, Start
+    );
+
+    this.navigationCooldown = 0;
+    this.previousGamepadButtons = {};
+
+    this.refreshDisplay();
+  }
+
+  update(time, delta) {
+    this.inputGuard.updateReleaseState();
+
+    if (!this.inputGuard.canValidate) {
+      this.inputGuard.endFrame();
+      this.saveCurrentGamepadButtons();
+      return;
     }
 
-    create() {
-        // Index du niveau actuellement sélectionné dans la liste.
-        this.selectedIndex = 0;
+    this.navigationCooldown -= delta;
 
-        this.add.text(640, 80, 'CARTE D’INTERVENTION', {
-            fontFamily: 'monospace',
-            fontSize: '42px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
+    this.handleNavigation();
+    this.handleValidation();
 
-        this.add.text(640, 640, 'Stick / Flèches : choisir | A / Start / Entrée / Espace : valider', {
-            fontFamily: 'monospace',
-            fontSize: '20px',
-            color: '#cccccc'
-        }).setOrigin(0.5);
+    this.inputGuard.endFrame();
+    this.saveCurrentGamepadButtons();
+  }
 
-        // Textes affichés pour chaque niveau.
-        // Ils seront mis à jour dans refreshDisplay().
-        this.levelTexts = [];
-
-        levels.forEach((level, index) => {
-            const isUnlocked = this.isLevelUnlocked(level.id);
-
-            const text = this.add.text(640, 180 + index * 70, '', {
-                fontFamily: 'monospace',
-                fontSize: '28px',
-                color: isUnlocked ? '#ffffff' : '#777777'
-            }).setOrigin(0.5);
-
-            this.levelTexts.push(text);
-        });
-
-        // Touches clavier utilisées sur la carte.
-        this.keys = this.input.keyboard.addKeys({
-            up: 'UP',
-            down: 'DOWN',
-            z: 'Z',
-            s: 'S',
-            enter: 'ENTER',
-            space: 'SPACE'
-        });
-
-        // MenuInputGuard gère uniquement la validation.
-        // Il empêche notamment qu’un Espace ou un A maintenu depuis l’écran titre
-        // valide immédiatement le niveau sélectionné sur la carte.
-        this.inputGuard = new MenuInputGuard(
-            this,
-            {
-                enter: this.keys.enter,
-                space: this.keys.space
-            },
-            [0, 9] // A, Start
-        );
-
-        // Permet d’éviter que le stick fasse défiler trop vite.
-        this.navigationCooldown = 0;
-
-        // État précédent des boutons D-Pad.
-        // On garde cette logique séparée du MenuInputGuard, car le D-Pad sert à naviguer,
-        // pas à valider.
-        this.previousGamepadButtons = {};
-
-        this.refreshDisplay();
+  handleNavigation() {
+    if (this.navigationCooldown > 0) {
+      return;
     }
 
-    update(time, delta) {
-        // Mise à jour du garde de validation.
-        // Tant que les inputs de validation n’ont pas été relâchés,
-        // la carte ne peut pas lancer de niveau.
-        this.inputGuard.updateReleaseState();
+    const direction = this.getNavigationDirection();
 
-        // Si la validation n’est pas encore autorisée, on bloque uniquement la validation.
-        // On met quand même à jour les états internes en fin de frame.
-        if (!this.inputGuard.canValidate) {
-            this.inputGuard.endFrame();
-            this.saveCurrentGamepadButtons();
-            return;
-        }
-
-        this.navigationCooldown -= delta;
-
-        this.handleNavigation();
-        this.handleValidation();
-
-        this.inputGuard.endFrame();
-        this.saveCurrentGamepadButtons();
+    if (direction === 0) {
+      return;
     }
 
-    handleNavigation() {
-        if (this.navigationCooldown > 0) {
-            return;
-        }
+    this.selectedIndex += direction;
 
-        const direction = this.getNavigationDirection();
-
-        if (direction === 0) {
-            return;
-        }
-
-        this.selectedIndex += direction;
-
-        if (this.selectedIndex < 0) {
-            this.selectedIndex = levels.length - 1;
-        }
-
-        if (this.selectedIndex >= levels.length) {
-            this.selectedIndex = 0;
-        }
-
-        this.navigationCooldown = 180;
-
-        this.refreshDisplay();
+    if (this.selectedIndex < 0) {
+      this.selectedIndex = levels.length - 1;
     }
 
-    handleValidation() {
-        if (!this.isConfirmPressed()) {
-            return;
-        }
-
-        const selectedLevel = levels[this.selectedIndex];
-
-        // Si le niveau est verrouillé, on ignore la validation.
-        if (!this.isLevelUnlocked(selectedLevel.id)) {
-            return;
-        }
-
-        // On mémorise le niveau choisi, puis BriefingScene ira le lire dans GameState.
-        gameState.setCurrentLevel(selectedLevel.id);
-        this.scene.start('BriefingScene');
+    if (this.selectedIndex >= levels.length) {
+      this.selectedIndex = 0;
     }
 
-    refreshDisplay() {
-        levels.forEach((level, index) => {
-            const isSelected = index === this.selectedIndex;
-            const isUnlocked = this.isLevelUnlocked(level.id);
+    this.navigationCooldown = 180;
+    this.refreshDisplay();
+  }
 
-            const prefix = isSelected ? '> ' : '  ';
-            const lockText = isUnlocked ? '' : ' [verrouillé]';
-
-            this.levelTexts[index].setText(`${prefix}${level.name}${lockText}`);
-
-            if (!isUnlocked) {
-                this.levelTexts[index].setColor('#777777');
-            } else if (isSelected) {
-                this.levelTexts[index].setColor('#ffcc66');
-            } else {
-                this.levelTexts[index].setColor('#ffffff');
-            }
-        });
+  handleValidation() {
+    if (!this.isConfirmPressed()) {
+      return;
     }
 
-    isLevelUnlocked(levelId) {
-        // Méthode normale depuis GameState.
-        if (typeof gameState.isLevelUnlocked === 'function') {
-            return gameState.isLevelUnlocked(levelId);
-        }
+    const selectedLevel = levels[this.selectedIndex];
 
-        // Fallbacks de sécurité, au cas où GameState évoluerait.
-        if (Array.isArray(gameState.unlockedLevels)) {
-            return gameState.unlockedLevels.includes(levelId);
-        }
-
-        if (typeof gameState.highestUnlockedLevel === 'number') {
-            return levelId <= gameState.highestUnlockedLevel;
-        }
-
-        if (typeof gameState.unlockedLevel === 'number') {
-            return levelId <= gameState.unlockedLevel;
-        }
-
-        // Sécurité minimale : le niveau 1 doit toujours rester jouable.
-        return levelId === 1;
+    if (!this.isLevelUnlocked(selectedLevel.id)) {
+      this.statusText.setText('Secteur encore verrouillé.');
+      return;
     }
 
-    getNavigationDirection() {
-        const keyboardUp =
-            Phaser.Input.Keyboard.JustDown(this.keys.up) ||
-            Phaser.Input.Keyboard.JustDown(this.keys.z);
+    gameState.setCurrentLevel(selectedLevel.id);
+    this.scene.start('BriefingScene');
+  }
 
-        const keyboardDown =
-            Phaser.Input.Keyboard.JustDown(this.keys.down) ||
-            Phaser.Input.Keyboard.JustDown(this.keys.s);
+  refreshDisplay() {
+    this.mapGraphics.clear();
 
-        if (keyboardUp) {
-            return -1;
-        }
+    this.drawPaths();
+    this.drawNodes();
 
-        if (keyboardDown) {
-            return 1;
-        }
+    const selectedLevel = levels[this.selectedIndex];
 
-        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    if (this.isLevelUnlocked(selectedLevel.id)) {
+      this.statusText.setText(`Secteur sélectionné : ${selectedLevel.name}`);
+    } else {
+      this.statusText.setText(`Secteur verrouillé : ${selectedLevel.name}`);
+    }
+  }
 
-        for (const gamepad of gamepads) {
-            if (!gamepad) {
-                continue;
-            }
+  drawPaths() {
+    for (let index = 0; index < this.levelPositions.length - 1; index++) {
+      const start = this.levelPositions[index];
+      const end = this.levelPositions[index + 1];
 
-            const leftY = gamepad.axes[1] || 0;
+      const nextLevel = levels[index + 1];
+      const isPathUnlocked = this.isLevelUnlocked(nextLevel.id);
 
-            // Stick gauche vertical.
-            if (leftY < -0.5) {
-                return -1;
-            }
+      this.mapGraphics.lineStyle(
+        10,
+        isPathUnlocked ? 0xff8a2a : 0x3b3f4a,
+        isPathUnlocked ? 0.75 : 0.55
+      );
 
-            if (leftY > 0.5) {
-                return 1;
-            }
+      this.mapGraphics.beginPath();
+      this.mapGraphics.moveTo(start.x, start.y);
+      this.mapGraphics.lineTo(end.x, end.y);
+      this.mapGraphics.strokePath();
 
-            // D-Pad Xbox standard :
-            // 12 = haut
-            // 13 = bas
-            if (this.wasGamepadButtonPressed(12)) {
-                return -1;
-            }
+      this.mapGraphics.lineStyle(
+        2,
+        isPathUnlocked ? 0xffcc66 : 0x777777,
+        isPathUnlocked ? 0.85 : 0.35
+      );
 
-            if (this.wasGamepadButtonPressed(13)) {
-                return 1;
-            }
-        }
+      this.mapGraphics.beginPath();
+      this.mapGraphics.moveTo(start.x, start.y);
+      this.mapGraphics.lineTo(end.x, end.y);
+      this.mapGraphics.strokePath();
+    }
+  }
 
-        return 0;
+  drawNodes() {
+    levels.forEach((level, index) => {
+      const position = this.levelPositions[index];
+
+      const isSelected = index === this.selectedIndex;
+      const isUnlocked = this.isLevelUnlocked(level.id);
+      const isCompleted = this.isLevelCompleted(level.id);
+
+      const outerColor = isSelected ? 0xffcc66 : 0xffffff;
+      const fillColor = this.getNodeColor(isUnlocked, isCompleted);
+
+      this.mapGraphics.fillStyle(fillColor, isUnlocked ? 1 : 0.55);
+      this.mapGraphics.fillCircle(position.x, position.y, isSelected ? 34 : 28);
+
+      this.mapGraphics.lineStyle(
+        isSelected ? 5 : 3,
+        outerColor,
+        isSelected ? 1 : 0.55
+      );
+
+      this.mapGraphics.strokeCircle(position.x, position.y, isSelected ? 38 : 31);
+
+      this.mapGraphics.fillStyle(0x101018, 0.75);
+      this.mapGraphics.fillCircle(position.x, position.y, 15);
+
+      this.mapGraphics.fillStyle(isUnlocked ? 0xffcc66 : 0x777777, 1);
+      this.mapGraphics.fillCircle(position.x, position.y, 6);
+
+      const status = this.getLevelStatusText(level.id);
+
+      this.levelLabels[index].setText(`${level.name}\n${status}`);
+
+      if (!isUnlocked) {
+        this.levelLabels[index].setColor('#777777');
+      } else if (isSelected) {
+        this.levelLabels[index].setColor('#ffcc66');
+      } else if (isCompleted) {
+        this.levelLabels[index].setColor('#d8ffd8');
+      } else {
+        this.levelLabels[index].setColor('#ffffff');
+      }
+    });
+  }
+
+  getNodeColor(isUnlocked, isCompleted) {
+    if (isCompleted) {
+      return 0x2f6f3e;
     }
 
-    isConfirmPressed() {
-        // La validation passe maintenant uniquement par MenuInputGuard.
-        // Cela harmonise Espace / Entrée avec A / Start et évite les validations en cascade.
-        return this.inputGuard.isPressed();
+    if (isUnlocked) {
+      return 0x8a4b1f;
     }
 
-    isGamepadButtonDown(buttonIndex) {
-        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    return 0x2a2f3a;
+  }
 
-        for (const gamepad of gamepads) {
-            if (!gamepad) {
-                continue;
-            }
-
-            const button = gamepad.buttons[buttonIndex];
-
-            if (button && (button.pressed || button.value > 0.5)) {
-                return true;
-            }
-        }
-
-        return false;
+  getLevelStatusText(levelId) {
+    if (this.isLevelCompleted(levelId)) {
+      return 'terminé';
     }
 
-    wasGamepadButtonPressed(buttonIndex) {
-        const isDownNow = this.isGamepadButtonDown(buttonIndex);
-        const wasDownBefore = this.previousGamepadButtons[buttonIndex] || false;
-
-        return isDownNow && !wasDownBefore;
+    if (this.isLevelUnlocked(levelId)) {
+      return 'accessible';
     }
 
-    saveCurrentGamepadButtons() {
-        this.previousGamepadButtons = {
-            12: this.isGamepadButtonDown(12), // D-Pad haut
-            13: this.isGamepadButtonDown(13)  // D-Pad bas
-        };
+    return 'verrouillé';
+  }
+
+  isLevelCompleted(levelId) {
+    if (typeof gameState.unlockedLevel !== 'number') {
+      return false;
     }
+
+    return levelId < gameState.unlockedLevel;
+  }
+
+  isLevelUnlocked(levelId) {
+    if (typeof gameState.isLevelUnlocked === 'function') {
+      return gameState.isLevelUnlocked(levelId);
+    }
+
+    if (typeof gameState.unlockedLevel === 'number') {
+      return levelId <= gameState.unlockedLevel;
+    }
+
+    return levelId === 1;
+  }
+
+  getNavigationDirection() {
+    const keyboardPrevious =
+      Phaser.Input.Keyboard.JustDown(this.keys.up) ||
+      Phaser.Input.Keyboard.JustDown(this.keys.left) ||
+      Phaser.Input.Keyboard.JustDown(this.keys.z) ||
+      Phaser.Input.Keyboard.JustDown(this.keys.q);
+
+    const keyboardNext =
+      Phaser.Input.Keyboard.JustDown(this.keys.down) ||
+      Phaser.Input.Keyboard.JustDown(this.keys.right) ||
+      Phaser.Input.Keyboard.JustDown(this.keys.s) ||
+      Phaser.Input.Keyboard.JustDown(this.keys.d);
+
+    if (keyboardPrevious) {
+      return -1;
+    }
+
+    if (keyboardNext) {
+      return 1;
+    }
+
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+
+    for (const gamepad of gamepads) {
+      if (!gamepad) {
+        continue;
+      }
+
+      const leftX = gamepad.axes[0] || 0;
+      const leftY = gamepad.axes[1] || 0;
+
+      if (leftX < -0.5 || leftY < -0.5) {
+        return -1;
+      }
+
+      if (leftX > 0.5 || leftY > 0.5) {
+        return 1;
+      }
+
+      if (this.wasGamepadButtonPressed(12) || this.wasGamepadButtonPressed(14)) {
+        return -1;
+      }
+
+      if (this.wasGamepadButtonPressed(13) || this.wasGamepadButtonPressed(15)) {
+        return 1;
+      }
+    }
+
+    return 0;
+  }
+
+  isConfirmPressed() {
+    return this.inputGuard.isPressed();
+  }
+
+  isGamepadButtonDown(buttonIndex) {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+
+    for (const gamepad of gamepads) {
+      if (!gamepad) {
+        continue;
+      }
+
+      const button = gamepad.buttons[buttonIndex];
+
+      if (button && (button.pressed || button.value > 0.5)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  wasGamepadButtonPressed(buttonIndex) {
+    const isDownNow = this.isGamepadButtonDown(buttonIndex);
+    const wasDownBefore = this.previousGamepadButtons[buttonIndex] || false;
+
+    return isDownNow && !wasDownBefore;
+  }
+
+  saveCurrentGamepadButtons() {
+    this.previousGamepadButtons = {
+      12: this.isGamepadButtonDown(12),
+      13: this.isGamepadButtonDown(13),
+      14: this.isGamepadButtonDown(14),
+      15: this.isGamepadButtonDown(15),
+    };
+  }
 }

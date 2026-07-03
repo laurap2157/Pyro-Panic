@@ -3,76 +3,104 @@ import * as Phaser from 'phaser';
 import { levels } from '../data/levels.js';
 import gameState from '../systems/GameState.js';
 import MenuInputGuard from '../systems/MenuInputGuard.js';
+import ScreenView from '../objects/ScreenView.js';
 
 export default class BriefingScene extends Phaser.Scene {
-    constructor() {
-        super('BriefingScene');
+  constructor() {
+    super('BriefingScene');
+  }
+
+  create() {
+    this.level = levels.find(level => level.id === gameState.currentLevelId);
+
+    if (!this.level) {
+      this.scene.start('WorldMapScene');
+      return;
     }
 
-    create() {
-        // On récupère le niveau courant depuis GameState.
-        // WorldMapScene définit ce niveau juste avant de lancer BriefingScene.
-        this.level = levels.find(level => level.id === gameState.currentLevelId);
+    this.ui = new ScreenView(this);
 
-        // Sécurité : si aucun niveau n'est trouvé, on retourne à la carte.
-        // Cela évite un écran cassé si currentLevelId contient une valeur invalide.
-        if (!this.level) {
-            this.scene.start('WorldMapScene');
-            return;
-        }
+    this.ui.drawBackground({
+      accentColor: 0xffb35c,
+      dangerColor: 0x5c1f16,
+    });
 
-        this.add.text(640, 130, this.level.name, {
-            fontFamily: 'monospace',
-            fontSize: '42px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
+    this.ui.addSubtitle('BRIEFING D’INTERVENTION', 58, {
+      fontSize: '24px',
+      color: '#ffb35c',
+    });
 
-        this.add.text(640, 260, `Objectif : ${this.level.briefing}`, {
-            fontFamily: 'monospace',
-            fontSize: '24px',
-            color: '#cccccc',
-            align: 'center',
-            wordWrap: { width: 900 }
-        }).setOrigin(0.5);
+    this.ui.drawPanel(
+      this.ui.centerX - 470,
+      135,
+      940,
+      430,
+      {
+        fillColor: 0x151a24,
+        strokeColor: 0xffcc66,
+      }
+    );
 
-        this.add.text(640, 390, `Conseil : ${this.level.tip}`, {
-            fontFamily: 'monospace',
-            fontSize: '22px',
-            color: '#ffcc66',
-            align: 'center',
-            wordWrap: { width: 900 }
-        }).setOrigin(0.5);
+    this.ui.addTitle(this.level.name, 195, {
+      fontSize: '46px',
+      color: '#ffffff',
+    });
 
-        this.add.text(640, 600, 'Relâchez les touches, puis appuyez sur A / Entrée / Espace pour commencer', {
-            fontFamily: 'monospace',
-            fontSize: '20px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
+    this.ui.addBadge('OBJECTIF', this.ui.centerX, 285, {
+      width: 170,
+      fillColor: 0x263243,
+      strokeColor: 0xffcc66,
+    });
 
-        // Touches clavier permettant de lancer le niveau.
-        // Ici, on conserve Espace parce qu'on est encore dans un écran de menu,
-        // pas dans l'écran de victoire qui suit un tir maintenu.
-        this.continueKeys = this.input.keyboard.addKeys({
-            space: 'SPACE',
-            enter: 'ENTER'
-        });
+    this.ui.addBody(
+      this.level.briefing,
+      this.ui.centerX,
+      345,
+      760,
+      {
+        fontSize: '23px',
+        color: '#dddddd',
+      }
+    );
 
-        // MenuInputGuard empêche le briefing d'être validé automatiquement
-        // par la touche ou le bouton qui a servi à sélectionner le niveau sur la carte.
-        this.inputGuard = new MenuInputGuard(
-            this,
-            this.continueKeys,
-            [0, 9] // A, Start
-        );
+    this.ui.addBadge('CONSEIL', this.ui.centerX, 445, {
+      width: 150,
+      fillColor: 0x3b2817,
+      strokeColor: 0xff8a2a,
+    });
+
+    this.ui.addBody(
+      this.level.tip,
+      this.ui.centerX,
+      505,
+      780,
+      {
+        fontSize: '21px',
+        color: '#ffcc8a',
+      }
+    );
+
+    this.ui.addHint('A / Start / Entrée / Espace : lancer la mission');
+
+    this.continueKeys = this.input.keyboard.addKeys({
+      space: 'SPACE',
+      enter: 'ENTER',
+    });
+
+    this.inputGuard = new MenuInputGuard(
+      this,
+      this.continueKeys,
+      [0, 9] // A, Start
+    );
+  }
+
+  update() {
+    this.inputGuard.updateReleaseState();
+
+    if (this.inputGuard.isPressed()) {
+      this.scene.start(this.level.key);
     }
 
-    update() {
-        this.inputGuard.updateReleaseState();
-
-        if (this.inputGuard.isPressed()) {
-            this.scene.start(this.level.key);
-        }
-
-        this.inputGuard.endFrame();
-    }
+    this.inputGuard.endFrame();
+  }
 }
