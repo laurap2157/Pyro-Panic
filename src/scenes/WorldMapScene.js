@@ -4,20 +4,26 @@ import { levels } from '../data/levels.js';
 import gameState from '../systems/GameState.js';
 import MenuInputGuard from '../systems/MenuInputGuard.js';
 import ScreenView from '../objects/ScreenView.js';
+import MusicManager from '../systems/MusicManager.js';
 
 export default class WorldMapScene extends Phaser.Scene {
   constructor() {
     super('WorldMapScene');
   }
 
-  preload() {
-    this.load.image('btn-a', 'assets/ui/xbox_360_A.png');
-    this.load.image('btn-stick', 'assets/ui/xbox_360_joystick.png');
-  }
-
   create() {
-    this.ui = new ScreenView(this);
+    // =====================================================
+    // 1. Musique de carte / navigation
+    // =====================================================
+    MusicManager.play(this, 'music-map', {
+      volume: 0.48,
+      fadeDuration: 900,
+    });
 
+    // =====================================================
+    // 2. Initialisation UI
+    // =====================================================
+    this.ui = new ScreenView(this);
     this.selectedIndex = 0;
 
     this.ui.drawBackground({
@@ -35,6 +41,9 @@ export default class WorldMapScene extends Phaser.Scene {
       color: '#cccccc',
     });
 
+    // =====================================================
+    // 3. Données visuelles de la carte
+    // =====================================================
     this.mapGraphics = this.add.graphics();
 
     this.levelPositions = [
@@ -64,8 +73,11 @@ export default class WorldMapScene extends Phaser.Scene {
       align: 'center',
     }).setOrigin(0.5);
 
-    this.createMapHint();
+    this.ui.addHint('Stick / Flèches : choisir | A / Start / Entrée / Espace : valider');
 
+    // =====================================================
+    // 4. Inputs clavier / manette
+    // =====================================================
     this.keys = this.input.keyboard.addKeys({
       up: 'UP',
       down: 'DOWN',
@@ -91,10 +103,16 @@ export default class WorldMapScene extends Phaser.Scene {
     this.navigationCooldown = 0;
     this.previousGamepadButtons = {};
 
+    // =====================================================
+    // 5. Premier rendu de la carte
+    // =====================================================
     this.refreshDisplay();
   }
 
   update(time, delta) {
+    // =====================================================
+    // 1. Garde anti-maintien
+    // =====================================================
     this.inputGuard.updateReleaseState();
 
     if (!this.inputGuard.canValidate) {
@@ -103,11 +121,17 @@ export default class WorldMapScene extends Phaser.Scene {
       return;
     }
 
+    // =====================================================
+    // 2. Navigation / validation
+    // =====================================================
     this.navigationCooldown -= delta;
 
     this.handleNavigation();
     this.handleValidation();
 
+    // =====================================================
+    // 3. Fin de frame
+    // =====================================================
     this.inputGuard.endFrame();
     this.saveCurrentGamepadButtons();
   }
@@ -375,66 +399,5 @@ export default class WorldMapScene extends Phaser.Scene {
       14: this.isGamepadButtonDown(14),
       15: this.isGamepadButtonDown(15),
     };
-  }
-
-  createMapHint() {
-    const y = this.ui.height - 58;
-    const centerX = this.ui.centerX;
-
-    const styleMain = {
-      fontFamily: 'monospace',
-      fontSize: '18px',
-      color: '#ffcc66',
-    };
-
-    const styleAccent = {
-      fontFamily: 'monospace',
-      fontSize: '18px',
-      color: '#ffcc66',
-    };
-
-    const textAfterStick = 'Joystick : choisir';
-    const separator = '   |   ';
-    const textAfterA = 'Valider';
-
-    const temp1 = this.add.text(0, 0, textAfterStick, styleMain).setVisible(false);
-    const temp2 = this.add.text(0, 0, separator, styleMain).setVisible(false);
-    const temp3 = this.add.text(0, 0, textAfterA, styleAccent).setVisible(false);
-
-    const iconSize = 24;
-    const gap = 8;
-
-    const totalWidth =
-      iconSize +
-      gap +
-      temp1.width +
-      temp2.width +
-      iconSize +
-      gap +
-      temp3.width;
-
-    let currentX = centerX - totalWidth / 2;
-
-    this.add.image(currentX, y + 2, 'btn-stick')
-      .setOrigin(0, 0.5)
-      .setDisplaySize(iconSize, iconSize);
-    currentX += iconSize + gap;
-
-    this.add.text(currentX, y - 11, textAfterStick, styleMain).setOrigin(0, 0);
-    currentX += temp1.width;
-
-    this.add.text(currentX, y - 11, separator, styleMain).setOrigin(0, 0);
-    currentX += temp2.width;
-
-    this.add.image(currentX, y + 2, 'btn-a')
-      .setOrigin(0, 0.5)
-      .setDisplaySize(iconSize, iconSize);
-    currentX += iconSize + gap;
-
-    this.add.text(currentX, y - 11, textAfterA, styleAccent).setOrigin(0, 0);
-
-    temp1.destroy();
-    temp2.destroy();
-    temp3.destroy();
   }
 }
