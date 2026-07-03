@@ -20,7 +20,7 @@ export const level1Layout = {
     { x: 1290, y: 640, width: 76, height: 62, type: 'decor_block' },
 
     // blocage du trottoir du bas
-    { x: 0, y: 655, width: 1366, height: 113, type: 'bottom_sidewalk_block' }
+    { x: 0, y: 625, width: 1366, height: 113, type: 'bottom_sidewalk_block' }
   ],
 
   decorations: [
