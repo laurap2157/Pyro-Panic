@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 
 import MenuInputGuard from '../systems/MenuInputGuard.js';
 import ScreenView from '../objects/ScreenView.js';
+import MusicManager from '../systems/MusicManager.js';
 
 export default class LevelPlaceholderScene extends Phaser.Scene {
   constructor(sceneKey, levelName) {
@@ -11,6 +12,17 @@ export default class LevelPlaceholderScene extends Phaser.Scene {
   }
 
   create() {
+    // =====================================================
+    // 1. Musique de navigation / placeholder
+    // =====================================================
+    MusicManager.play(this, 'music-map', {
+      volume: 0.45,
+      fadeDuration: 900,
+    });
+
+    // =====================================================
+    // 2. Interface placeholder
+    // =====================================================
     this.ui = new ScreenView(this);
 
     this.ui.drawBackground({
@@ -61,8 +73,11 @@ export default class LevelPlaceholderScene extends Phaser.Scene {
       }
     );
 
-    this.createReturnHint();
+    this.ui.addHint('A / Start / Entrée / Espace : retour carte');
 
+    // =====================================================
+    // 3. Inputs
+    // =====================================================
     this.continueKeys = this.input.keyboard.addKeys({
       space: 'SPACE',
       enter: 'ENTER',
@@ -76,28 +91,21 @@ export default class LevelPlaceholderScene extends Phaser.Scene {
   }
 
   update() {
+    // =====================================================
+    // 1. Garde anti-maintien
+    // =====================================================
     this.inputGuard.updateReleaseState();
 
+    // =====================================================
+    // 2. Retour carte
+    // =====================================================
     if (this.inputGuard.isPressed()) {
       this.scene.start('WorldMapScene');
     }
 
+    // =====================================================
+    // 3. Fin de frame
+    // =====================================================
     this.inputGuard.endFrame();
-  }
-
-  createReturnHint() {
-    const baseX = this.ui.centerX - 80;
-    const y = 610;
-
-    const icon = this.add.image(baseX, y, 'btn-a').setOrigin(0, 0.5);
-    icon.setScale(1);
-    icon.setDepth(100);
-
-    const text = this.add.text(baseX + 42, y - 12, ' Retour carte', {
-      fontFamily: 'monospace',
-      fontSize: '22px',
-      color: '#d9d9d9',
-    });
-    text.setDepth(100);
   }
 }

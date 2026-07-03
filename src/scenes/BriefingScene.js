@@ -4,17 +4,17 @@ import { levels } from '../data/levels.js';
 import gameState from '../systems/GameState.js';
 import MenuInputGuard from '../systems/MenuInputGuard.js';
 import ScreenView from '../objects/ScreenView.js';
+import MusicManager from '../systems/MusicManager.js';
 
 export default class BriefingScene extends Phaser.Scene {
   constructor() {
     super('BriefingScene');
   }
 
-  preload() {
-    this.load.image('btn-a', 'assets/ui/xbox_360_A.png');
-  }
-
   create() {
+    // =====================================================
+    // 1. Récupération du niveau courant
+    // =====================================================
     this.level = levels.find(level => level.id === gameState.currentLevelId);
 
     if (!this.level) {
@@ -22,6 +22,17 @@ export default class BriefingScene extends Phaser.Scene {
       return;
     }
 
+    // =====================================================
+    // 2. Musique de navigation / briefing
+    // =====================================================
+    MusicManager.play(this, 'music-map', {
+      volume: 0.48,
+      fadeDuration: 900,
+    });
+
+    // =====================================================
+    // 3. Interface de briefing
+    // =====================================================
     this.ui = new ScreenView(this);
 
     this.ui.drawBackground({
@@ -84,8 +95,11 @@ export default class BriefingScene extends Phaser.Scene {
       }
     );
 
-    this.createMissionHint();
+    this.ui.addHint('A / Start / Entrée / Espace : lancer la mission');
 
+    // =====================================================
+    // 4. Inputs
+    // =====================================================
     this.continueKeys = this.input.keyboard.addKeys({
       space: 'SPACE',
       enter: 'ENTER',
@@ -99,28 +113,21 @@ export default class BriefingScene extends Phaser.Scene {
   }
 
   update() {
+    // =====================================================
+    // 1. Garde anti-maintien
+    // =====================================================
     this.inputGuard.updateReleaseState();
 
+    // =====================================================
+    // 2. Lancement de la mission
+    // =====================================================
     if (this.inputGuard.isPressed()) {
       this.scene.start(this.level.key);
     }
 
+    // =====================================================
+    // 3. Fin de frame
+    // =====================================================
     this.inputGuard.endFrame();
-  }
-
-  createMissionHint() {
-    const baseX = this.ui.centerX - 110;
-    const y = 648;
-
-    const icon = this.add.image(baseX, y, 'btn-a').setOrigin(0, 0.5);
-    icon.setScale(1);
-    icon.setDepth(100);
-
-    const text = this.add.text(baseX + 42, y - 12, ' : Lancer la mission', {
-      fontFamily: 'monospace',
-      fontSize: '22px',
-      color: '#d9d9d9',
-    });
-    text.setDepth(100);
   }
 }

@@ -3,20 +3,31 @@ import * as Phaser from 'phaser';
 import gameState from '../systems/GameState.js';
 import MenuInputGuard from '../systems/MenuInputGuard.js';
 import ScreenView from '../objects/ScreenView.js';
+import MusicManager from '../systems/MusicManager.js';
 
 export default class VictoryScene extends Phaser.Scene {
   constructor() {
     super('VictoryScene');
   }
 
-  preload() {
-    this.load.image('btn-a', 'assets/ui/xbox_360_A.png');
-  }
-
   create() {
+    // =====================================================
+    // 1. Mise à jour de la progression
+    // =====================================================
     gameState.setLastResult('victory');
     gameState.unlockNextLevel();
 
+    // =====================================================
+    // 2. Musique de navigation / résultat
+    // =====================================================
+    MusicManager.play(this, 'music-map', {
+      volume: 0.48,
+      fadeDuration: 900,
+    });
+
+    // =====================================================
+    // 3. Interface de victoire
+    // =====================================================
     this.ui = new ScreenView(this);
 
     this.ui.drawBackground({
@@ -56,8 +67,11 @@ export default class VictoryScene extends Phaser.Scene {
       }
     );
 
-    this.createReturnHint();
+    this.ui.addHint('A / Start / Entrée / Espace : retour carte');
 
+    // =====================================================
+    // 4. Inputs
+    // =====================================================
     this.continueKeys = this.input.keyboard.addKeys({
       space: 'SPACE',
       enter: 'ENTER',
@@ -71,39 +85,21 @@ export default class VictoryScene extends Phaser.Scene {
   }
 
   update() {
+    // =====================================================
+    // 1. Garde anti-maintien
+    // =====================================================
     this.inputGuard.updateReleaseState();
 
+    // =====================================================
+    // 2. Retour carte
+    // =====================================================
     if (this.inputGuard.isPressed()) {
       this.scene.start('WorldMapScene');
     }
 
+    // =====================================================
+    // 3. Fin de frame
+    // =====================================================
     this.inputGuard.endFrame();
-  }
-
-  createReturnHint() {
-    const y = 592;
-
-    const textStyle = {
-      fontFamily: 'monospace',
-      fontSize: '22px',
-      color: '#d9d9d9',
-    };
-
-    const tempText = this.add.text(0, 0, 'Retour carte', textStyle).setVisible(false);
-    const iconSize = 28;
-    const gap = 12;
-    const totalWidth = iconSize + gap + tempText.width;
-    const startX = this.ui.centerX - totalWidth / 2;
-
-    this.add.image(startX, y, 'btn-a')
-      .setOrigin(0, 0.5)
-      .setDisplaySize(iconSize, iconSize)
-      .setDepth(100);
-
-    this.add.text(startX + iconSize + gap, y - 14, 'Retour carte', textStyle)
-      .setOrigin(0, 0)
-      .setDepth(100);
-
-    tempText.destroy();
   }
 }

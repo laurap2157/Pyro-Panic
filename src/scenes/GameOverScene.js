@@ -5,17 +5,17 @@ import { levels } from '../data/levels.js';
 import gameState from '../systems/GameState.js';
 import MenuInputGuard from '../systems/MenuInputGuard.js';
 import ScreenView from '../objects/ScreenView.js';
+import MusicManager from '../systems/MusicManager.js';
 
 export default class GameOverScene extends Phaser.Scene {
   constructor() {
     super('GameOverScene');
   }
 
-  preload() {
-    this.load.image('btn-y', 'assets/ui/xbox_360_Y.png');
-  }
-
   create(data) {
+    // =====================================================
+    // 1. Récupération du contexte d’échec
+    // =====================================================
     this.reason = data?.reason || 'default';
 
     const currentLevel = levels.find(level => level.id === gameState.currentLevelId);
@@ -23,6 +23,17 @@ export default class GameOverScene extends Phaser.Scene {
 
     const tipData = tips[this.reason] || tips.default;
 
+    // =====================================================
+    // 2. Musique de résultat / navigation
+    // =====================================================
+    MusicManager.play(this, 'music-gameover', {
+      volume: 0.5,
+      fadeDuration: 900,
+    });
+
+    // =====================================================
+    // 3. Interface de game over
+    // =====================================================
     this.ui = new ScreenView(this);
 
     this.ui.drawBackground({
@@ -90,8 +101,11 @@ export default class GameOverScene extends Phaser.Scene {
       }
     );
 
-    this.createRestartHint();
+    this.ui.addHint('R / Espace / Entrée / Y : recommencer');
 
+    // =====================================================
+    // 4. Inputs
+    // =====================================================
     this.restartKeys = this.input.keyboard.addKeys({
       r: 'R',
       space: 'SPACE',
@@ -106,28 +120,21 @@ export default class GameOverScene extends Phaser.Scene {
   }
 
   update() {
+    // =====================================================
+    // 1. Garde anti-maintien
+    // =====================================================
     this.inputGuard.updateReleaseState();
 
+    // =====================================================
+    // 2. Redémarrage du niveau courant
+    // =====================================================
     if (this.inputGuard.isPressed()) {
       this.scene.start(this.levelKey);
     }
 
+    // =====================================================
+    // 3. Fin de frame
+    // =====================================================
     this.inputGuard.endFrame();
-  }
-
-  createRestartHint() {
-    const baseX = this.ui.centerX - 95;
-    const y = 655;
-
-    const icon = this.add.image(baseX, y, 'btn-y').setOrigin(0, 0.5);
-    icon.setScale(1);
-    icon.setDepth(100);
-
-    const text = this.add.text(baseX + 42, y - 12, ' Recommencer', {
-      fontFamily: 'monospace',
-      fontSize: '22px',
-      color: '#d9d9d9',
-    });
-    text.setDepth(100);
   }
 }
