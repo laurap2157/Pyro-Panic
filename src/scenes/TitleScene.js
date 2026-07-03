@@ -15,6 +15,7 @@ export default class TitleScene extends Phaser.Scene {
     // Le fichier contient déjà le titre "PYRO PANIC"
     // et le sous-titre "DEVIL'S SPARK".
     this.load.image('title-background', 'assets/backgrounds/EcranTitre.png');
+    this.load.image('btn-a', 'assets/ui/xbox_360_A.png');
   }
 
   create() {
@@ -56,14 +57,7 @@ export default class TitleScene extends Phaser.Scene {
       0.72
     ).setStrokeStyle(2, 0xf7d28a, 0.65);
 
-    this.add.text(width / 2, height - 72, 'A / START / ENTRÉE / ESPACE', {
-      fontFamily: 'monospace',
-      fontSize: '24px',
-      color: '#ffffff',
-      stroke: '#000000',
-      strokeThickness: 4,
-      align: 'center',
-    }).setOrigin(0.5);
+    this.createStartHint(width / 2, height - 72);
 
     this.add.text(width / 2, height - 32, 'F : plein écran', {
       fontFamily: 'monospace',
@@ -138,4 +132,34 @@ export default class TitleScene extends Phaser.Scene {
 
     return image;
   }
+
+    createStartHint(centerX, y) {
+      const iconSize = 28;
+      const gap = 10;
+
+      const textStyle = {
+        fontFamily: 'monospace',
+        fontSize: '22px',
+        color: '#ffcc66',
+        stroke: '#000000',
+        strokeThickness: 4,
+      };
+
+      const label = ': Commencer';
+
+      const tempText = this.add.text(0, 0, label, textStyle).setVisible(false);
+
+      const totalWidth = iconSize + gap + tempText.width;
+      let currentX = centerX - totalWidth / 2;
+
+      this.add.image(currentX, y + 1, 'btn-a')
+        .setOrigin(0, 0.5)
+        .setDisplaySize(iconSize, iconSize);
+
+      currentX += iconSize + gap;
+
+      this.add.text(currentX, y - 14, label, textStyle).setOrigin(0, 0);
+
+      tempText.destroy();
+    }
 }
