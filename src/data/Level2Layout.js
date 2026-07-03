@@ -24,7 +24,7 @@ export const level2Layout = {
     {
       id: 'hidden-fire-door-3',
       doorId: 'door-3',
-      x: 857,
+      x: 870,
       y: 245,
       size: 'large',
       type: 'normal',
@@ -76,8 +76,8 @@ export const level2Layout = {
       // Coordonnées de placement du sprite open_red_door.png.
       // Le sprite est aligné sur la porte fermée déjà dessinée
       // dans le background.
-      openSpriteX: 857,
-      openSpriteY: 326,
+      openSpriteX: 868,
+      openSpriteY: 295,
       openSpriteScale: 0.18,
     },
     {
