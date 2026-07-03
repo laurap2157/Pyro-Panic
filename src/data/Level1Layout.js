@@ -3,14 +3,15 @@ export const level1Layout = {
 
   fires: [
     { x: 490, y: 345, size: 'small', type: 'normal' },
-    { x: 900, y: 210, size: 'medium', type: 'normal' },
-    { x: 1045, y: 555, size: 'large', type: 'normal' }
+    { x: 900, y: 210, size: 'small', type: 'normal' },
+    { x: 1045, y: 555, size: 'large', type: 'normal' },
+    { x: 1300, y: 650, size: 'large', type: 'normal' }
   ],
 
   obstacles: [
     { x: 0, y: 0, width: 1366, height: 275, type: 'building_row' },
 
-    { x: 105, y: 515, width: 300, height: 170, type: 'firetruck' },
+    { x: 90, y: 505, width: 380, height: 185, type: 'firetruck' },
 
     { x: 23, y: 157, width: 71, height: 67, type: 'decor_block' },
     { x: 893, y: 159, width: 88, height: 44, type: 'decor_block' },
@@ -36,10 +37,10 @@ export const level1Layout = {
 
   interactives: [
     {
-      x: 255,
-      y: 600,
-      width: 300,
-      height: 170,
+      x: 430,
+      y: 575,
+      width: 35,
+      height: 70,
       type: 'water_refill',
       key: 'firetruck',
       prompt: 'Recharger en eau'
