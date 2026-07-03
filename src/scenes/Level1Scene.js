@@ -3,6 +3,7 @@ import * as Phaser from 'phaser';
 import Player from '../objects/Player.js';
 import Fire from '../objects/Fire.js';
 import HudView from '../objects/HudView.js';
+import SupplyPoint from '../objects/SupplyPoint.js';
 
 import InputManager from '../systems/InputManager.js';
 import ExtinguishSystem from '../systems/ExtinguishSystem.js';
@@ -27,13 +28,18 @@ export default class Level1Scene extends Phaser.Scene {
     this.load.image('texture_oxygen', 'assets/sprites/oxygen.png');
 
     this.load.spritesheet('fire-small', 'assets/sprites/fire_small.png', {
-        frameWidth: 32,
-        frameHeight: 32,
+      frameWidth: 32,
+      frameHeight: 32,
     });
 
     this.load.spritesheet('fire-large', 'assets/sprites/fire_large.png', {
-        frameWidth: 32,
-        frameHeight: 45,
+      frameWidth: 32,
+      frameHeight: 45,
+    });
+
+    this.load.spritesheet('pompier', 'assets/sprites/Firefighter.png', {
+      frameWidth: 32,
+      frameHeight: 32,
     });
   }
 
@@ -47,29 +53,14 @@ export default class Level1Scene extends Phaser.Scene {
     this.obstacles = level1Layout.obstacles || [];
     this.collisionSystem = new CollisionSystem(this.obstacles);
 
+    this.createPlayerAnimations();
+    this.createFireAnimations();
+
     this.player = new Player(
       this,
       level1Layout.playerSpawn.x,
       level1Layout.playerSpawn.y
     );
-
-    if (!this.anims.exists('fire-small-burn')) {
-        this.anims.create({
-            key: 'fire-small-burn',
-            frames: this.anims.generateFrameNumbers('fire-small', { start: 0, end: 7 }),
-            frameRate: 12,
-            repeat: -1,
-        });
-        }
-
-    if (!this.anims.exists('fire-large-burn')) {
-        this.anims.create({
-            key: 'fire-large-burn',
-            frames: this.anims.generateFrameNumbers('fire-large', { start: 0, end: 7 }),
-            frameRate: 12,
-            repeat: -1,
-        });
-        }
 
     this.fires = level1Layout.fires.map((fireData) => {
       const fire = new Fire({
@@ -79,29 +70,47 @@ export default class Level1Scene extends Phaser.Scene {
         type: fireData.type,
       });
 
-    const textureKey = fire.size === 'large' ? 'fire-large' : 'fire-small';
-    const animKey = fire.size === 'large' ? 'fire-large-burn' : 'fire-small-burn';
+      const textureKey = fire.size === 'large' ? 'fire-large' : 'fire-small';
+      const animKey = fire.size === 'large' ? 'fire-large-burn' : 'fire-small-burn';
 
-    fire.sprite = this.add.sprite(fire.x, fire.y, textureKey, 0);
-    fire.sprite.setDepth(2);
-    fire.sprite.play(animKey);
+      fire.sprite = this.add.sprite(fire.x, fire.y, textureKey, 0);
+      fire.sprite.setDepth(2);
+      fire.sprite.play(animKey);
 
-    if (fire.size === 'small') {
+      if (fire.size === 'small') {
         fire.sprite.setScale(1.2);
-    } else if (fire.size === 'medium') {
+      } else if (fire.size === 'medium') {
         fire.sprite.setScale(1.35);
-    } else if (fire.size === 'large') {
+      } else if (fire.size === 'large') {
         fire.sprite.setScale(1.5);
-    } else {
+      } else {
         fire.sprite.setScale(1.2);
-    }
+      }
 
       return fire;
     });
 
+    this.supplyPoints = (level1Layout.interactives || [])
+      .filter((interactive) => interactive.type === 'water_refill')
+      .map((interactive) => {
+        return new SupplyPoint(this, {
+          ...interactive,
+          agent: 'water',
+          amount: interactive.amount ?? 100,
+          label: interactive.label || interactive.prompt || 'Recharger en eau',
+        });
+      });
+
     this.graphics = this.add.graphics();
 
     this.hud = new HudView(this);
+
+    this.interactionFeedbackText = this.add.text(24, 704, '', {
+      fontFamily: 'monospace',
+      fontSize: '18px',
+      color: '#ffffff',
+    });
+    this.interactionFeedbackText.setDepth(100);
 
     this.helpText = this.add.text(
       24,
@@ -120,6 +129,7 @@ export default class Level1Scene extends Phaser.Scene {
 
     this.resourceSystem.update(delta);
     this.player.update(input, delta, this.collisionSystem);
+    this.handleInteractions(input);
 
     this.graphics.clear();
 
@@ -147,13 +157,17 @@ export default class Level1Scene extends Phaser.Scene {
 
     this.drawSpray(sprayOrigin, aimDirection, power);
 
+    const hasConsumedResource = this.resourceSystem.consumeAgent(power, delta);
+
+    if (!hasConsumedResource) {
+      return;
+    }
+
     const touchedFires = this.getTouchedFires(sprayOrigin, aimDirection);
 
     if (touchedFires.length === 0) {
       return;
     }
-
-    this.resourceSystem.consumeAgent(power, delta);
 
     touchedFires.forEach((fire) => {
       this.extinguishSystem.applyJet({
@@ -247,6 +261,85 @@ export default class Level1Scene extends Phaser.Scene {
     if (fire.size === 'large') return 40;
 
     return 24;
+  }
+
+  createPlayerAnimations() {
+    const directions = [
+      { key: 'face', start: 0 },
+      { key: 'dos', start: 4 },
+      { key: 'gauche', start: 8 },
+      { key: 'droite', start: 12 },
+      { key: 'diag-haut-gauche', start: 16 },
+      { key: 'diag-haut-droite', start: 20 },
+      { key: 'diag-bas-gauche', start: 24 },
+      { key: 'diag-bas-droite', start: 28 },
+    ];
+
+    directions.forEach((direction) => {
+      const animationKey = `pompier-${direction.key}`;
+
+      if (this.anims.exists(animationKey)) {
+        return;
+      }
+
+      this.anims.create({
+        key: animationKey,
+        frames: this.anims.generateFrameNumbers('pompier', {
+          start: direction.start,
+          end: direction.start + 3,
+        }),
+        frameRate: 10,
+        repeat: -1,
+      });
+    });
+  }
+
+  createFireAnimations() {
+    if (!this.anims.exists('fire-small-burn')) {
+      this.anims.create({
+        key: 'fire-small-burn',
+        frames: this.anims.generateFrameNumbers('fire-small', { start: 0, end: 7 }),
+        frameRate: 12,
+        repeat: -1,
+      });
+    }
+
+    if (!this.anims.exists('fire-large-burn')) {
+      this.anims.create({
+        key: 'fire-large-burn',
+        frames: this.anims.generateFrameNumbers('fire-large', { start: 0, end: 7 }),
+        frameRate: 12,
+        repeat: -1,
+      });
+    }
+  }
+
+  handleInteractions(input) {
+    if (!input.interactPressed) {
+      return;
+    }
+
+    const playerPosition = this.player.getPosition();
+
+    const supplyPoint = this.supplyPoints.find((point) => {
+      return point.isPlayerInRange(playerPosition);
+    });
+
+    if (!supplyPoint) {
+      return;
+    }
+
+    const result = supplyPoint.interact(this.resourceSystem);
+
+    this.showInteractionFeedback(result.message);
+  }
+
+  showInteractionFeedback(message) {
+    this.interactionFeedbackText.setText(message);
+
+    this.time.delayedCall(1200, () => {
+      this.interactionFeedbackText.setText('');
+    });
   }
 
   checkEndConditions() {

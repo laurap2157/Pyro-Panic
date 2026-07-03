@@ -4,6 +4,7 @@ const DEFAULT_AIM_Y = 0;
 
 const PLAYER_WIDTH = 32;
 const PLAYER_HEIGHT = 32;
+const PLAYER_SPRITE_SCALE = 2;
 
 export default class Player {
     constructor(scene, x, y) {
@@ -14,13 +15,21 @@ export default class Player {
         this.lastAimX = DEFAULT_AIM_X;
         this.lastAimY = DEFAULT_AIM_Y;
 
-        // Placeholder visuel actuel.
-        // Plus tard, ce rectangle pourra être remplacé par un sprite animé,
-        // mais le contrat public de Player devra rester le même.
-        this.sprite = scene.add.rectangle(x, y, PLAYER_WIDTH, PLAYER_HEIGHT, 0x2f6fdd);
-        this.sprite.setStrokeStyle(2, 0xffffff);
+        this.hasAnimatedSprite = scene.textures.exists('pompier');
 
-        // Ligne de visée temporaire.
+        if (this.hasAnimatedSprite) {
+            this.sprite = scene.add.sprite(x, y, 'pompier', 0);
+            this.sprite.setScale(PLAYER_SPRITE_SCALE);
+            this.sprite.setDepth(3);
+            this.screenHalfWidth = (PLAYER_WIDTH * PLAYER_SPRITE_SCALE) / 2;
+            this.screenHalfHeight = (PLAYER_HEIGHT * PLAYER_SPRITE_SCALE) / 2;
+        } else {
+            this.sprite = scene.add.rectangle(x, y, PLAYER_WIDTH, PLAYER_HEIGHT, 0x2f6fdd);
+            this.sprite.setStrokeStyle(2, 0xffffff);
+            this.screenHalfWidth = PLAYER_WIDTH / 2;
+            this.screenHalfHeight = PLAYER_HEIGHT / 2;
+        }
+
         this.aimLine = scene.add.line(
             0,
             0,
@@ -32,6 +41,7 @@ export default class Player {
         );
 
         this.aimLine.setOrigin(0, 0);
+        this.aimLine.setDepth(4);
         this.updateAimLine();
     }
 
@@ -41,14 +51,13 @@ export default class Player {
         this.move(inputState, deltaInSeconds, collisionSystem);
         this.updateAim(inputState);
         this.updateAimLine();
+        this.updateAnimation(inputState);
     }
 
     move(inputState, deltaInSeconds, collisionSystem = null) {
         const deltaX = inputState.moveX * this.speed * deltaInSeconds;
         const deltaY = inputState.moveY * this.speed * deltaInSeconds;
 
-        // Si aucun système de collision n'est fourni,
-        // on garde le comportement précédent.
         if (!collisionSystem) {
             this.sprite.x += deltaX;
             this.sprite.y += deltaY;
@@ -57,21 +66,13 @@ export default class Player {
             return;
         }
 
-        // Si un système de collision est fourni,
-        // on convertit la position du joueur en hitbox rectangulaire.
         const currentHitbox = this.getHitbox();
-
-        // Le CollisionSystem retourne une hitbox corrigée.
-        // Il gère notamment le déplacement axe X puis axe Y
-        // pour permettre au joueur de glisser le long des murs.
         const resolvedHitbox = collisionSystem.resolveMovement(
             currentHitbox,
             deltaX,
             deltaY
         );
 
-        // La hitbox utilise x/y en coin haut-gauche.
-        // Le sprite Phaser utilise x/y au centre.
         this.sprite.x = resolvedHitbox.x + resolvedHitbox.width / 2;
         this.sprite.y = resolvedHitbox.y + resolvedHitbox.height / 2;
 
@@ -87,6 +88,55 @@ export default class Player {
         }
     }
 
+    updateAnimation(inputState) {
+        if (!this.hasAnimatedSprite) {
+            return;
+        }
+
+        if (inputState.moveX === 0 && inputState.moveY === 0) {
+            this.sprite.anims.stop();
+            return;
+        }
+
+        const animationKey = this.getAnimationKey(inputState);
+
+        if (this.scene.anims.exists(animationKey)) {
+            this.sprite.play(animationKey, true);
+        }
+    }
+
+    getAnimationKey(inputState) {
+        if (inputState.moveX < 0 && inputState.moveY < 0) {
+            return 'pompier-diag-haut-gauche';
+        }
+
+        if (inputState.moveX > 0 && inputState.moveY < 0) {
+            return 'pompier-diag-haut-droite';
+        }
+
+        if (inputState.moveX < 0 && inputState.moveY > 0) {
+            return 'pompier-diag-bas-gauche';
+        }
+
+        if (inputState.moveX > 0 && inputState.moveY > 0) {
+            return 'pompier-diag-bas-droite';
+        }
+
+        if (inputState.moveY < 0) {
+            return 'pompier-dos';
+        }
+
+        if (inputState.moveY > 0) {
+            return 'pompier-face';
+        }
+
+        if (inputState.moveX < 0) {
+            return 'pompier-gauche';
+        }
+
+        return 'pompier-droite';
+    }
+
     updateAimLine() {
         this.aimLine.x = this.sprite.x;
         this.aimLine.y = this.sprite.y;
@@ -100,12 +150,9 @@ export default class Player {
     }
 
     keepInsideScreen() {
-        const halfWidth = PLAYER_WIDTH / 2;
-        const halfHeight = PLAYER_HEIGHT / 2;
+        const halfWidth = this.screenHalfWidth;
+        const halfHeight = this.screenHalfHeight;
 
-        // On utilise la taille réelle de la scène au lieu de coder 1280 × 720 en dur.
-        // Cela permet au joueur de rester compatible avec la résolution actuelle du projet :
-        // 1376 × 768.
         const sceneWidth = this.scene.scale.width;
         const sceneHeight = this.scene.scale.height;
 
