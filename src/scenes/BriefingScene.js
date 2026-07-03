@@ -10,6 +10,10 @@ export default class BriefingScene extends Phaser.Scene {
     super('BriefingScene');
   }
 
+  preload() {
+    this.load.image('btn-a', 'assets/ui/xbox_360_A.png');
+  }
+
   create() {
     this.level = levels.find(level => level.id === gameState.currentLevelId);
 
@@ -80,7 +84,7 @@ export default class BriefingScene extends Phaser.Scene {
       }
     );
 
-    this.ui.addHint('A / Start / Entrée / Espace : lancer la mission');
+    this.createMissionHint();
 
     this.continueKeys = this.input.keyboard.addKeys({
       space: 'SPACE',
@@ -102,5 +106,21 @@ export default class BriefingScene extends Phaser.Scene {
     }
 
     this.inputGuard.endFrame();
+  }
+
+  createMissionHint() {
+    const baseX = this.ui.centerX - 110;
+    const y = 648;
+
+    const icon = this.add.image(baseX, y, 'btn-a').setOrigin(0, 0.5);
+    icon.setScale(1);
+    icon.setDepth(100);
+
+    const text = this.add.text(baseX + 42, y - 12, ' : Lancer la mission', {
+      fontFamily: 'monospace',
+      fontSize: '22px',
+      color: '#d9d9d9',
+    });
+    text.setDepth(100);
   }
 }

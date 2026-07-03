@@ -10,6 +10,11 @@ export default class WorldMapScene extends Phaser.Scene {
     super('WorldMapScene');
   }
 
+  preload() {
+    this.load.image('btn-a', 'assets/ui/xbox_360_A.png');
+    this.load.image('btn-stick', 'assets/ui/xbox_360_joystick.png');
+  }
+
   create() {
     this.ui = new ScreenView(this);
 
@@ -59,7 +64,7 @@ export default class WorldMapScene extends Phaser.Scene {
       align: 'center',
     }).setOrigin(0.5);
 
-    this.ui.addHint('Stick / Flèches : choisir | A / Start / Entrée / Espace : valider');
+    this.createMapHint();
 
     this.keys = this.input.keyboard.addKeys({
       up: 'UP',
@@ -370,5 +375,66 @@ export default class WorldMapScene extends Phaser.Scene {
       14: this.isGamepadButtonDown(14),
       15: this.isGamepadButtonDown(15),
     };
+  }
+
+  createMapHint() {
+    const y = this.ui.height - 58;
+    const centerX = this.ui.centerX;
+
+    const styleMain = {
+      fontFamily: 'monospace',
+      fontSize: '18px',
+      color: '#ffcc66',
+    };
+
+    const styleAccent = {
+      fontFamily: 'monospace',
+      fontSize: '18px',
+      color: '#ffcc66',
+    };
+
+    const textAfterStick = 'Joystick : choisir';
+    const separator = '   |   ';
+    const textAfterA = 'Valider';
+
+    const temp1 = this.add.text(0, 0, textAfterStick, styleMain).setVisible(false);
+    const temp2 = this.add.text(0, 0, separator, styleMain).setVisible(false);
+    const temp3 = this.add.text(0, 0, textAfterA, styleAccent).setVisible(false);
+
+    const iconSize = 24;
+    const gap = 8;
+
+    const totalWidth =
+      iconSize +
+      gap +
+      temp1.width +
+      temp2.width +
+      iconSize +
+      gap +
+      temp3.width;
+
+    let currentX = centerX - totalWidth / 2;
+
+    this.add.image(currentX, y + 2, 'btn-stick')
+      .setOrigin(0, 0.5)
+      .setDisplaySize(iconSize, iconSize);
+    currentX += iconSize + gap;
+
+    this.add.text(currentX, y - 11, textAfterStick, styleMain).setOrigin(0, 0);
+    currentX += temp1.width;
+
+    this.add.text(currentX, y - 11, separator, styleMain).setOrigin(0, 0);
+    currentX += temp2.width;
+
+    this.add.image(currentX, y + 2, 'btn-a')
+      .setOrigin(0, 0.5)
+      .setDisplaySize(iconSize, iconSize);
+    currentX += iconSize + gap;
+
+    this.add.text(currentX, y - 11, textAfterA, styleAccent).setOrigin(0, 0);
+
+    temp1.destroy();
+    temp2.destroy();
+    temp3.destroy();
   }
 }

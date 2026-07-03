@@ -61,7 +61,7 @@ export default class LevelPlaceholderScene extends Phaser.Scene {
       }
     );
 
-    this.ui.addHint('A / Start / Entrée / Espace : retour carte');
+    this.createReturnHint();
 
     this.continueKeys = this.input.keyboard.addKeys({
       space: 'SPACE',
@@ -83,5 +83,21 @@ export default class LevelPlaceholderScene extends Phaser.Scene {
     }
 
     this.inputGuard.endFrame();
+  }
+
+  createReturnHint() {
+    const baseX = this.ui.centerX - 80;
+    const y = 610;
+
+    const icon = this.add.image(baseX, y, 'btn-a').setOrigin(0, 0.5);
+    icon.setScale(1);
+    icon.setDepth(100);
+
+    const text = this.add.text(baseX + 42, y - 12, ' Retour carte', {
+      fontFamily: 'monospace',
+      fontSize: '22px',
+      color: '#d9d9d9',
+    });
+    text.setDepth(100);
   }
 }

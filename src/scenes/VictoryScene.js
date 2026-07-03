@@ -9,6 +9,10 @@ export default class VictoryScene extends Phaser.Scene {
     super('VictoryScene');
   }
 
+  preload() {
+    this.load.image('btn-a', 'assets/ui/xbox_360_A.png');
+  }
+
   create() {
     gameState.setLastResult('victory');
     gameState.unlockNextLevel();
@@ -52,7 +56,7 @@ export default class VictoryScene extends Phaser.Scene {
       }
     );
 
-    this.ui.addHint('A / Start / Entrée / Espace : retour carte');
+    this.createReturnHint();
 
     this.continueKeys = this.input.keyboard.addKeys({
       space: 'SPACE',
@@ -74,5 +78,32 @@ export default class VictoryScene extends Phaser.Scene {
     }
 
     this.inputGuard.endFrame();
+  }
+
+  createReturnHint() {
+    const y = 592;
+
+    const textStyle = {
+      fontFamily: 'monospace',
+      fontSize: '22px',
+      color: '#d9d9d9',
+    };
+
+    const tempText = this.add.text(0, 0, 'Retour carte', textStyle).setVisible(false);
+    const iconSize = 28;
+    const gap = 12;
+    const totalWidth = iconSize + gap + tempText.width;
+    const startX = this.ui.centerX - totalWidth / 2;
+
+    this.add.image(startX, y, 'btn-a')
+      .setOrigin(0, 0.5)
+      .setDisplaySize(iconSize, iconSize)
+      .setDepth(100);
+
+    this.add.text(startX + iconSize + gap, y - 14, 'Retour carte', textStyle)
+      .setOrigin(0, 0)
+      .setDepth(100);
+
+    tempText.destroy();
   }
 }

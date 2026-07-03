@@ -11,6 +11,10 @@ export default class GameOverScene extends Phaser.Scene {
     super('GameOverScene');
   }
 
+  preload() {
+    this.load.image('btn-y', 'assets/ui/xbox_360_Y.png');
+  }
+
   create(data) {
     this.reason = data?.reason || 'default';
 
@@ -86,7 +90,7 @@ export default class GameOverScene extends Phaser.Scene {
       }
     );
 
-    this.ui.addHint('R / Espace / Entrée / Y : recommencer');
+    this.createRestartHint();
 
     this.restartKeys = this.input.keyboard.addKeys({
       r: 'R',
@@ -109,5 +113,21 @@ export default class GameOverScene extends Phaser.Scene {
     }
 
     this.inputGuard.endFrame();
+  }
+
+  createRestartHint() {
+    const baseX = this.ui.centerX - 95;
+    const y = 655;
+
+    const icon = this.add.image(baseX, y, 'btn-y').setOrigin(0, 0.5);
+    icon.setScale(1);
+    icon.setDepth(100);
+
+    const text = this.add.text(baseX + 42, y - 12, ' Recommencer', {
+      fontFamily: 'monospace',
+      fontSize: '22px',
+      color: '#d9d9d9',
+    });
+    text.setDepth(100);
   }
 }

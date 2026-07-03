@@ -12,6 +12,7 @@ export default class TitleScene extends Phaser.Scene {
     // Le fichier contient déjà le titre "PYRO PANIC"
     // et le sous-titre "DEVIL'S SPARK".
     this.load.image('title-background', 'assets/backgrounds/EcranTitre.png');
+    this.load.image('btn-a', 'assets/ui/xbox_360_A.png');
   }
 
   create() {
@@ -50,23 +51,7 @@ export default class TitleScene extends Phaser.Scene {
       0.72
     ).setStrokeStyle(2, 0xf7d28a, 0.65);
 
-    this.add.text(width / 2, height - 82, 'A / START / ENTRÉE / ESPACE', {
-      fontFamily: 'monospace',
-      fontSize: '23px',
-      color: '#ffffff',
-      stroke: '#000000',
-      strokeThickness: 4,
-      align: 'center',
-    }).setOrigin(0.5);
-
-    this.add.text(width / 2, height - 54, 'F : PLEIN ÉCRAN', {
-      fontFamily: 'monospace',
-      fontSize: '17px',
-      color: '#f7d28a',
-      stroke: '#000000',
-      strokeThickness: 3,
-      align: 'center',
-    }).setOrigin(0.5);
+    this.createStartHint(width, height);
 
     // =====================================================
     // 3. Inputs
@@ -128,5 +113,46 @@ export default class TitleScene extends Phaser.Scene {
     image.setScale(scale);
 
     return image;
+  }
+
+  createStartHint(width, height) {
+    const centerX = width / 2;
+
+    // Ligne 1
+    const topY = height - 86;
+
+    const iconSize = 28;
+    const gap = 12;
+
+    const textStyle = {
+      fontFamily: 'monospace',
+      fontSize: '23px',
+      color: '#f7d28a',
+      stroke: '#000000',
+      strokeThickness: 4,
+    };
+
+    const tempText = this.add.text(0, 0, 'Commencer', textStyle).setVisible(false);
+    const totalWidth = iconSize + gap + tempText.width;
+    const startX = centerX - totalWidth / 2;
+
+    const icon = this.add.image(startX, topY, 'btn-a')
+      .setOrigin(0, 0.5)
+      .setDisplaySize(iconSize, iconSize);
+
+    const text = this.add.text(startX + iconSize + gap, topY - 15, 'Commencer', textStyle)
+      .setOrigin(0, 0);
+
+    tempText.destroy();
+
+    // Ligne 2
+    this.add.text(width / 2, height - 50, 'F : PLEIN ÉCRAN', {
+      fontFamily: 'monospace',
+      fontSize: '17px',
+      color: '#f7d28a',
+      stroke: '#000000',
+      strokeThickness: 3,
+      align: 'center',
+    }).setOrigin(0.5);
   }
 }
