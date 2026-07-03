@@ -4,7 +4,6 @@ import { levels } from '../data/levels.js';
 import gameState from '../systems/GameState.js';
 import MenuInputGuard from '../systems/MenuInputGuard.js';
 import ScreenView from '../objects/ScreenView.js';
-import MusicManager from '../systems/MusicManager.js';
 
 export default class WorldMapScene extends Phaser.Scene {
   constructor() {
@@ -14,21 +13,12 @@ export default class WorldMapScene extends Phaser.Scene {
   preload() {
     this.load.image('btn-a', 'assets/ui/xbox_360_A.png');
     this.load.image('btn-stick', 'assets/ui/xbox_360_joystick.png');
+    this.load.image('map-background', 'assets/maps/intervention_map.png');
   }
 
   create() {
-    // =====================================================
-    // 1. Musique de carte / navigation
-    // =====================================================
-    MusicManager.play(this, 'music-map', {
-      volume: 0.48,
-      fadeDuration: 900,
-    });
-
-    // =====================================================
-    // 2. Initialisation UI
-    // =====================================================
     this.ui = new ScreenView(this);
+
     this.selectedIndex = 0;
 
     // Affichage de l'illustration pixel art calée sur la résolution de référence 1280x720
@@ -37,9 +27,6 @@ export default class WorldMapScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setDisplaySize(1280, 720);
 
-    // =====================================================
-    // 3. Données visuelles de la carte
-    // =====================================================
     this.mapGraphics = this.add.graphics();
 
     // Coordonnées absolues basées sur l'illustration en 1280x720
@@ -65,13 +52,8 @@ export default class WorldMapScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.ui.addHint(
-      'Stick / Flèches : choisir | A / Start / Entrée / Espace : valider',
-    );
+    this.createMapHint();
 
-    // =====================================================
-    // 4. Inputs clavier / manette
-    // =====================================================
     this.keys = this.input.keyboard.addKeys({
       up: 'UP',
       down: 'DOWN',
@@ -97,16 +79,10 @@ export default class WorldMapScene extends Phaser.Scene {
     this.navigationCooldown = 0;
     this.previousGamepadButtons = {};
 
-    // =====================================================
-    // 5. Premier rendu de la carte
-    // =====================================================
     this.refreshDisplay();
   }
 
   update(time, delta) {
-    // =====================================================
-    // 1. Garde anti-maintien
-    // =====================================================
     this.inputGuard.updateReleaseState();
 
     if (!this.inputGuard.canValidate) {
@@ -115,17 +91,11 @@ export default class WorldMapScene extends Phaser.Scene {
       return;
     }
 
-    // =====================================================
-    // 2. Navigation / validation
-    // =====================================================
     this.navigationCooldown -= delta;
 
     this.handleNavigation();
     this.handleValidation();
 
-    // =====================================================
-    // 3. Fin de frame
-    // =====================================================
     this.inputGuard.endFrame();
     this.saveCurrentGamepadButtons();
   }
