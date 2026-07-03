@@ -358,35 +358,49 @@ export default class Level1Scene extends Phaser.Scene {
   }
 
   createControlHints() {
-    const baseX = 24;
     const y = 728;
-    let currentX = baseX;
 
     const textStyle = {
       fontFamily: 'monospace',
-      fontSize: '16px',
+      fontSize: '15px',
       color: '#cccccc',
     };
 
-    const addIcon = (key, width = 34, scale = 0.9) => {
-      const icon = this.add.image(currentX, y + 10, key).setOrigin(0, 0.5);
-      icon.setScale(scale);
-      icon.setDepth(100);
-      currentX += width;
+    const createBuilder = (startX) => {
+      let currentX = startX;
+
+      const addIcon = (key, width = 32, scale = 0.85, offsetY = 9) => {
+        const icon = this.add.image(currentX, y + offsetY, key).setOrigin(0, 0.5);
+        icon.setScale(scale);
+        icon.setDepth(100);
+        currentX += width;
+      };
+
+      const addText = (content, gap = 0) => {
+        const text = this.add.text(currentX, y, content, textStyle);
+        text.setDepth(100);
+        currentX += text.width + gap;
+      };
+
+      return { addIcon, addText };
     };
 
-    const addText = (content, gap = 0) => {
-      const text = this.add.text(currentX, y, content, textStyle);
-      text.setDepth(100);
-      currentX += text.width + gap;
-    };
+    // Bloc gauche
+    const left = createBuilder(24);
+    left.addIcon('btn-stick', 32, 0.9);
+    left.addText(' : viser le jet   ', 8);
 
-    addIcon('btn-rt', 34, 0.9);
-    addText(' : jet faible   ', 8);
+    left.addIcon('btn-a', 32, 0.85);
+    left.addText(' : recharger en eau', 8);
 
-    addIcon('btn-rb', 40, 1.2);
-    addText(' + ', 4);
-    addIcon('btn-rt', 34, 0.9);
-    addText(' : jet puissant');
+    // Bloc droit
+    const right = createBuilder(860);
+    right.addIcon('btn-rt', 32, 0.85);
+    right.addText(' : jet faible   ', 8);
+
+    right.addIcon('btn-rb', 36, 1.1);
+    right.addText(' + ', 3);
+    right.addIcon('btn-rt', 32, 0.85);
+    right.addText(' : jet puissant');
   }
 }
