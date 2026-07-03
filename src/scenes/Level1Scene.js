@@ -26,6 +26,11 @@ export default class Level1Scene extends Phaser.Scene {
     this.load.image('texture_water', 'assets/sprites/water.png');
     this.load.image('texture_foam', 'assets/sprites/foam.png');
     this.load.image('texture_oxygen', 'assets/sprites/oxygen.png');
+    this.load.image('btn-rt', 'assets/ui/xbox_360_RT.png');
+    this.load.image('btn-rb', 'assets/ui/xbox_360_RB.png');
+    this.load.image('btn-stick', 'assets/ui/xbox_360_joystick.png');
+    this.load.image('btn-a', 'assets/ui/xbox_360_A.png');
+    this.load.image('btn-y', 'assets/ui/xbox_360_Y.png');
 
     this.load.spritesheet('fire-small', 'assets/sprites/fire_small.png', {
       frameWidth: 32,
@@ -113,16 +118,7 @@ export default class Level1Scene extends Phaser.Scene {
     this.interactionFeedbackText.setDepth(100);
     this.interactionFeedbackText.setVisible(false);
 
-    this.helpText = this.add.text(
-      24,
-      728,
-      'RT / Espace / Clic : jet faible | RB + RT / Shift : jet puissant',
-      {
-        fontFamily: 'monospace',
-        fontSize: '18px',
-        color: '#cccccc',
-      },
-    );
+    this.createControlHints();
   }
 
   update(time, delta) {
@@ -180,38 +176,38 @@ export default class Level1Scene extends Phaser.Scene {
     });
   }
 
-getTouchedFires(sprayOrigin, aimDirection) {
-  return this.fires.filter((fire) => {
-    if (fire.isExtinguished) {
-      return false;
-    }
+  getTouchedFires(sprayOrigin, aimDirection) {
+    return this.fires.filter((fire) => {
+      if (fire.isExtinguished) {
+        return false;
+      }
 
-    const fireVectorX = fire.x - sprayOrigin.x;
-    const fireVectorY = fire.y - sprayOrigin.y;
+      const fireVectorX = fire.x - sprayOrigin.x;
+      const fireVectorY = fire.y - sprayOrigin.y;
 
-    const projection =
-      fireVectorX * aimDirection.x +
-      fireVectorY * aimDirection.y;
+      const projection =
+        fireVectorX * aimDirection.x +
+        fireVectorY * aimDirection.y;
 
-    if (projection < 0 || projection > SPRAY_RANGE) {
-      return false;
-    }
+      if (projection < 0 || projection > SPRAY_RANGE) {
+        return false;
+      }
 
-    const closestPointX = sprayOrigin.x + aimDirection.x * projection;
-    const closestPointY = sprayOrigin.y + aimDirection.y * projection;
+      const closestPointX = sprayOrigin.x + aimDirection.x * projection;
+      const closestPointY = sprayOrigin.y + aimDirection.y * projection;
 
-    const distanceToSpray = Phaser.Math.Distance.Between(
-      fire.x,
-      fire.y,
-      closestPointX,
-      closestPointY,
-    );
+      const distanceToSpray = Phaser.Math.Distance.Between(
+        fire.x,
+        fire.y,
+        closestPointX,
+        closestPointY,
+      );
 
-    const fireHitRadius = fire.size === 'large' ? 16 : 12;
+      const fireHitRadius = fire.size === 'large' ? 16 : 12;
 
-    return distanceToSpray <= SPRAY_WIDTH + fireHitRadius;
-  });
-}
+      return distanceToSpray <= SPRAY_WIDTH + fireHitRadius;
+    });
+  }
 
   drawSpray(sprayOrigin, aimDirection, power) {
     const sprayLength = power === 'strong' ? SPRAY_RANGE : SPRAY_RANGE * 0.75;
@@ -359,5 +355,38 @@ getTouchedFires(sprayOrigin, aimDirection) {
         levelKey: 'Level1Scene',
       });
     }
+  }
+
+  createControlHints() {
+    const baseX = 24;
+    const y = 728;
+    let currentX = baseX;
+
+    const textStyle = {
+      fontFamily: 'monospace',
+      fontSize: '16px',
+      color: '#cccccc',
+    };
+
+    const addIcon = (key, width = 34, scale = 0.9) => {
+      const icon = this.add.image(currentX, y + 10, key).setOrigin(0, 0.5);
+      icon.setScale(scale);
+      icon.setDepth(100);
+      currentX += width;
+    };
+
+    const addText = (content, gap = 0) => {
+      const text = this.add.text(currentX, y, content, textStyle);
+      text.setDepth(100);
+      currentX += text.width + gap;
+    };
+
+    addIcon('btn-rt', 34, 0.9);
+    addText(' : jet faible   ', 8);
+
+    addIcon('btn-rb', 40, 1.2);
+    addText(' + ', 4);
+    addIcon('btn-rt', 34, 0.9);
+    addText(' : jet puissant');
   }
 }
