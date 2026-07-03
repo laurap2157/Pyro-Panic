@@ -24,8 +24,8 @@ export const level2Layout = {
     {
       id: 'hidden-fire-door-3',
       doorId: 'door-3',
-      x: 855,
-      y: 250,
+      x: 857,
+      y: 245,
       size: 'large',
       type: 'normal',
     },
@@ -34,16 +34,19 @@ export const level2Layout = {
   // =====================================================
   // 3. Portes inspectables
   // =====================================================
-  // Convention :
-  // x/y correspondent au point visuel de la porte dans la scène.
-  // Une seule porte possède hasHiddenFire: true.
+  // Le background contient déjà les portes fermées.
+  // On ne crée donc pas de sprites de portes fermées.
+  // La seule porte possédant hasHiddenFire: true reçoit un sprite
+  // de porte ouverte, caché au départ, puis affiché après inspection
+  // et arrosage.
   doors: [
     {
       id: 'door-1',
       x: 151,
-      y: 262,
+      y: 310,
       width: 80,
       height: 120,
+      interactionRange: 104,
       hasHiddenFire: false,
       hiddenFireId: null,
       label: 'Porte rouge 1',
@@ -51,9 +54,10 @@ export const level2Layout = {
     {
       id: 'door-2',
       x: 503,
-      y: 262,
+      y: 310,
       width: 80,
       height: 120,
+      interactionRange: 104,
       hasHiddenFire: false,
       hiddenFireId: null,
       label: 'Porte rouge 2',
@@ -61,19 +65,28 @@ export const level2Layout = {
     {
       id: 'door-3',
       x: 857,
-      y: 262,
+      y: 310,
       width: 80,
       height: 120,
+      interactionRange: 104,
       hasHiddenFire: true,
       hiddenFireId: 'hidden-fire-door-3',
       label: 'Porte rouge 3',
+
+      // Coordonnées de placement du sprite open_red_door.png.
+      // Le sprite est aligné sur la porte fermée déjà dessinée
+      // dans le background.
+      openSpriteX: 857,
+      openSpriteY: 326,
+      openSpriteScale: 0.18,
     },
     {
       id: 'door-4',
       x: 1208,
-      y: 262,
+      y: 310,
       width: 80,
       height: 120,
+      interactionRange: 104,
       hasHiddenFire: false,
       hiddenFireId: null,
       label: 'Porte rouge 4',

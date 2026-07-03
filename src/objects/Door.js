@@ -17,14 +17,34 @@ export default class Door {
     this.isInspected = false;
     this.isOpen = false;
     this.hasRevealedFire = false;
+    this.hasBeenSprayedAfterInspection = false;
 
-    this.sprite = scene.add.image(this.x, this.y, 'door');
-    this.sprite.setOrigin(0.5, 1);
-    this.sprite.setDepth(2);
+    this.interactionRange = config.interactionRange || 92;
 
-    this.interactionRange = config.interactionRange || 82;
+    // Le décor contient déjà les portes fermées.
+    // On ne crée donc aucun sprite de porte fermée côté code.
+    // Seule la porte ouverte de la bonne porte est ajoutée,
+    // masquée au départ, puis révélée après inspection + arrosage.
+    this.openSprite = null;
 
-    this.markerText = scene.add.text(this.x, this.y + 18, '', {
+    if (this.hasHiddenFire) {
+      this.openSprite = scene.add.image(
+        config.openSpriteX ?? this.x,
+        config.openSpriteY ?? this.y,
+        'open_door'
+      );
+
+      this.openSprite.setOrigin(
+        config.openSpriteOriginX ?? 0.5,
+        config.openSpriteOriginY ?? 1
+      );
+
+      this.openSprite.setScale(config.openSpriteScale ?? 0.18);
+      this.openSprite.setDepth(config.openSpriteDepth ?? 2);
+      this.openSprite.setVisible(false);
+    }
+
+    this.markerText = scene.add.text(this.x, this.y + 34, '', {
       fontFamily: 'monospace',
       fontSize: '13px',
       color: '#ffcc66',
@@ -50,11 +70,11 @@ export default class Door {
 
   inspect() {
     this.isInspected = true;
-
     this.markerText.setVisible(true);
 
     if (this.hasHiddenFire) {
       this.markerText.setText('Chaleur !');
+
       return {
         success: true,
         danger: true,
@@ -63,6 +83,7 @@ export default class Door {
     }
 
     this.markerText.setText('OK');
+
     return {
       success: true,
       danger: false,
@@ -71,7 +92,7 @@ export default class Door {
   }
 
   canReactToSpray(sprayOrigin, aimDirection, sprayRange, sprayWidth) {
-    if (this.isOpen) {
+    if (this.isOpen || this.hasBeenSprayedAfterInspection) {
       return false;
     }
 
@@ -122,32 +143,34 @@ export default class Door {
       };
     }
 
-    this.isOpen = true;
+    this.hasBeenSprayedAfterInspection = true;
 
-    if (this.scene.textures.exists('open_door')) {
-      this.sprite.setTexture('open_door');
-    }
-
-    this.markerText.setVisible(false);
-
-    if (this.hasHiddenFire) {
-      this.hasRevealedFire = true;
-
+    // Les portes sans feu restent de simples portes du décor.
+    // Elles ne reçoivent pas de sprite ouvert.
+    if (!this.hasHiddenFire) {
       return {
         success: true,
-        opened: true,
-        revealedHiddenFire: true,
-        hiddenFireId: this.hiddenFireId,
-        message: `${this.label} ouverte : feu découvert !`,
+        opened: false,
+        revealedHiddenFire: false,
+        hiddenFireId: null,
+        message: `${this.label} : aucun foyer derrière.`,
       };
+    }
+
+    this.isOpen = true;
+    this.hasRevealedFire = true;
+    this.markerText.setVisible(false);
+
+    if (this.openSprite) {
+      this.openSprite.setVisible(true);
     }
 
     return {
       success: true,
       opened: true,
-      revealedHiddenFire: false,
-      hiddenFireId: null,
-      message: `${this.label} ouverte : aucune flamme derrière.`,
+      revealedHiddenFire: true,
+      hiddenFireId: this.hiddenFireId,
+      message: `${this.label} ouverte : feu découvert !`,
     };
   }
 }
