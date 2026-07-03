@@ -37,9 +37,9 @@ export default class Level1Scene extends Phaser.Scene {
       frameHeight: 45,
     });
 
-    this.load.spritesheet('pompier', 'assets/sprites/Firefighter.png', {
-      frameWidth: 32,
-      frameHeight: 32,
+    this.load.spritesheet('pompier', 'assets/sprites/Firefighter_v10_64.png', {
+      frameWidth: 64,
+      frameHeight: 64,
     });
   }
 
@@ -264,31 +264,33 @@ export default class Level1Scene extends Phaser.Scene {
   }
 
   createPlayerAnimations() {
+    const frameCount = 6;
     const directions = [
-      { key: 'face', start: 0 },
-      { key: 'dos', start: 4 },
-      { key: 'gauche', start: 8 },
-      { key: 'droite', start: 12 },
-      { key: 'diag-haut-gauche', start: 16 },
-      { key: 'diag-haut-droite', start: 20 },
-      { key: 'diag-bas-gauche', start: 24 },
-      { key: 'diag-bas-droite', start: 28 },
+      { key: 'face', row: 0 },
+      { key: 'dos', row: 1 },
+      { key: 'gauche', row: 2 },
+      { key: 'droite', row: 3 },
+      { key: 'diag-haut-gauche', row: 4 },
+      { key: 'diag-haut-droite', row: 5 },
+      { key: 'diag-bas-gauche', row: 6 },
+      { key: 'diag-bas-droite', row: 7 },
     ];
 
     directions.forEach((direction) => {
       const animationKey = `pompier-${direction.key}`;
+      const start = direction.row * frameCount;
 
       if (this.anims.exists(animationKey)) {
-        return;
+        this.anims.remove(animationKey);
       }
 
       this.anims.create({
         key: animationKey,
         frames: this.anims.generateFrameNumbers('pompier', {
-          start: direction.start,
-          end: direction.start + 3,
+          start,
+          end: start + frameCount - 1,
         }),
-        frameRate: 10,
+        frameRate: 12,
         repeat: -1,
       });
     });

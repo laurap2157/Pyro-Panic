@@ -4,7 +4,7 @@ const DEFAULT_AIM_Y = 0;
 
 const PLAYER_WIDTH = 32;
 const PLAYER_HEIGHT = 32;
-const PLAYER_SPRITE_SCALE = 2;
+const PLAYER_DISPLAY_SIZE = 64;
 
 export default class Player {
     constructor(scene, x, y) {
@@ -19,10 +19,10 @@ export default class Player {
 
         if (this.hasAnimatedSprite) {
             this.sprite = scene.add.sprite(x, y, 'pompier', 0);
-            this.sprite.setScale(PLAYER_SPRITE_SCALE);
+            this.sprite.setDisplaySize(PLAYER_DISPLAY_SIZE, PLAYER_DISPLAY_SIZE);
             this.sprite.setDepth(3);
-            this.screenHalfWidth = (PLAYER_WIDTH * PLAYER_SPRITE_SCALE) / 2;
-            this.screenHalfHeight = (PLAYER_HEIGHT * PLAYER_SPRITE_SCALE) / 2;
+            this.screenHalfWidth = this.sprite.displayWidth / 2;
+            this.screenHalfHeight = this.sprite.displayHeight / 2;
         } else {
             this.sprite = scene.add.rectangle(x, y, PLAYER_WIDTH, PLAYER_HEIGHT, 0x2f6fdd);
             this.sprite.setStrokeStyle(2, 0xffffff);
