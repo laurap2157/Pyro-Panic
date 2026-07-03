@@ -13,7 +13,6 @@ export default class WorldMapScene extends Phaser.Scene {
   preload() {
     this.load.image('btn-a', 'assets/ui/xbox_360_A.png');
     this.load.image('btn-stick', 'assets/ui/xbox_360_joystick.png');
-    this.load.image('map-background', 'assets/maps/intervention_map.png');
   }
 
   create() {
@@ -21,36 +20,49 @@ export default class WorldMapScene extends Phaser.Scene {
 
     this.selectedIndex = 0;
 
-    // Affichage de l'illustration pixel art calée sur la résolution de référence 1280x720
-    this.add
-      .image(0, 0, 'map-background')
-      .setOrigin(0, 0)
-      .setDisplaySize(1280, 720);
+    this.ui.drawBackground({
+      accentColor: 0xffcc66,
+      dangerColor: 0x4d1515,
+    });
+
+    this.ui.addTitle('CARTE D’INTERVENTION', 64, {
+      fontSize: '44px',
+      color: '#ffe6a3',
+    });
+
+    this.ui.addSubtitle('Progression opérationnelle', 112, {
+      fontSize: '20px',
+      color: '#cccccc',
+    });
 
     this.mapGraphics = this.add.graphics();
 
-    // Coordonnées absolues basées sur l'illustration en 1280x720
     this.levelPositions = [
-      { x: 430, y: 530 }, // 1. Faubourg des Étincelles
-      { x: 430, y: 207 }, // 2. Le Manoir aux Portes Rouges
-      { x: 647, y: 374 }, // 3. L’Aire du Dernier Plein
-      { x: 888, y: 549 }, // 4. La Forêt de Brûlevent
-      { x: 912, y: 196 }, // 5. Zone inconnue (Centre du cadenas)
+      { x: 170, y: 430 },
+      { x: 430, y: 315 },
+      { x: 690, y: 450 },
+      { x: 950, y: 315 },
+      { x: 1205, y: 430 },
     ];
 
-    // Les labels textuels dynamiques sont masqués pour ne pas surcharger l'image d'origine
-    this.levelLabels = levels.map(() => {
-      return this.add.text(0, 0, '', { visible: false });
+    this.levelLabels = levels.map((level, index) => {
+      const position = this.levelPositions[index];
+
+      return this.add.text(position.x, position.y + 72, '', {
+        fontFamily: 'monospace',
+        fontSize: '17px',
+        color: '#ffffff',
+        align: 'center',
+        wordWrap: { width: 210 },
+      }).setOrigin(0.5);
     });
 
-    this.statusText = this.add
-      .text(this.ui.centerX, this.ui.height - 118, '', {
-        fontFamily: 'monospace',
-        fontSize: '20px',
-        color: '#ffcc66',
-        align: 'center',
-      })
-      .setOrigin(0.5);
+    this.statusText = this.add.text(this.ui.centerX, this.ui.height - 118, '', {
+      fontFamily: 'monospace',
+      fontSize: '20px',
+      color: '#ffcc66',
+      align: 'center',
+    }).setOrigin(0.5);
 
     this.createMapHint();
 
@@ -73,7 +85,7 @@ export default class WorldMapScene extends Phaser.Scene {
         enter: this.keys.enter,
         space: this.keys.space,
       },
-      [0, 9], // A, Start
+      [0, 9] // A, Start
     );
 
     this.navigationCooldown = 0;
@@ -144,6 +156,7 @@ export default class WorldMapScene extends Phaser.Scene {
   refreshDisplay() {
     this.mapGraphics.clear();
 
+    this.drawPaths();
     this.drawNodes();
 
     const selectedLevel = levels[this.selectedIndex];
@@ -155,48 +168,92 @@ export default class WorldMapScene extends Phaser.Scene {
     }
   }
 
-  drawNodes() {
-    const size = 24;
-    const radius = 4;
-    const half = size / 2;
+  drawPaths() {
+    for (let index = 0; index < this.levelPositions.length - 1; index++) {
+      const start = this.levelPositions[index];
+      const end = this.levelPositions[index + 1];
 
+      const nextLevel = levels[index + 1];
+      const isPathUnlocked = this.isLevelUnlocked(nextLevel.id);
+
+      this.mapGraphics.lineStyle(
+        10,
+        isPathUnlocked ? 0xff8a2a : 0x3b3f4a,
+        isPathUnlocked ? 0.75 : 0.55
+      );
+
+      this.mapGraphics.beginPath();
+      this.mapGraphics.moveTo(start.x, start.y);
+      this.mapGraphics.lineTo(end.x, end.y);
+      this.mapGraphics.strokePath();
+
+      this.mapGraphics.lineStyle(
+        2,
+        isPathUnlocked ? 0xffcc66 : 0x777777,
+        isPathUnlocked ? 0.85 : 0.35
+      );
+
+      this.mapGraphics.beginPath();
+      this.mapGraphics.moveTo(start.x, start.y);
+      this.mapGraphics.lineTo(end.x, end.y);
+      this.mapGraphics.strokePath();
+    }
+  }
+
+  drawNodes() {
     levels.forEach((level, index) => {
-      const { x, y } = this.levelPositions[index];
+      const position = this.levelPositions[index];
 
       const isSelected = index === this.selectedIndex;
       const isUnlocked = this.isLevelUnlocked(level.id);
+      const isCompleted = this.isLevelCompleted(level.id);
 
-      const borderColor = isSelected
-        ? 0xffd46b // jaune
-        : 0xd7d7d7; // gris clair
+      const outerColor = isSelected ? 0xffcc66 : 0xffffff;
+      const fillColor = this.getNodeColor(isUnlocked, isCompleted);
 
-      const fillColor = isUnlocked
-        ? 0x3b7f4a // vert foncé
-        : 0x7a2b2b; // rouge brique
+      this.mapGraphics.fillStyle(fillColor, isUnlocked ? 1 : 0.55);
+      this.mapGraphics.fillCircle(position.x, position.y, isSelected ? 34 : 28);
 
-      this.mapGraphics.fillStyle(fillColor, 1);
-      this.mapGraphics.fillRoundedRect(x - half, y - half, size, size, radius);
-
-      // Contour
-      this.mapGraphics.lineStyle(3, borderColor, 1);
-      this.mapGraphics.strokeRoundedRect(
-        x - half,
-        y - half,
-        size,
-        size,
-        radius,
+      this.mapGraphics.lineStyle(
+        isSelected ? 5 : 3,
+        outerColor,
+        isSelected ? 1 : 0.55
       );
 
-      // Léger reflet intérieur (optionnel, donne un effet plus proche du mockup)
-      this.mapGraphics.lineStyle(1, isSelected ? 0xffefb0 : 0xffffff, 0.18);
-      this.mapGraphics.strokeRoundedRect(
-        x - half + 1,
-        y - half + 1,
-        size - 2,
-        size - 2,
-        radius - 1,
-      );
+      this.mapGraphics.strokeCircle(position.x, position.y, isSelected ? 38 : 31);
+
+      this.mapGraphics.fillStyle(0x101018, 0.75);
+      this.mapGraphics.fillCircle(position.x, position.y, 15);
+
+      this.mapGraphics.fillStyle(isUnlocked ? 0xffcc66 : 0x777777, 1);
+      this.mapGraphics.fillCircle(position.x, position.y, 6);
+
+      const status = this.getLevelStatusText(level.id);
+
+      this.levelLabels[index].setText(`${level.name}\n${status}`);
+
+      if (!isUnlocked) {
+        this.levelLabels[index].setColor('#777777');
+      } else if (isSelected) {
+        this.levelLabels[index].setColor('#ffcc66');
+      } else if (isCompleted) {
+        this.levelLabels[index].setColor('#d8ffd8');
+      } else {
+        this.levelLabels[index].setColor('#ffffff');
+      }
     });
+  }
+
+  getNodeColor(isUnlocked, isCompleted) {
+    if (isCompleted) {
+      return 0x2f6f3e;
+    }
+
+    if (isUnlocked) {
+      return 0x8a4b1f;
+    }
+
+    return 0x2a2f3a;
   }
 
   getLevelStatusText(levelId) {
@@ -270,17 +327,11 @@ export default class WorldMapScene extends Phaser.Scene {
         return 1;
       }
 
-      if (
-        this.wasGamepadButtonPressed(12) ||
-        this.wasGamepadButtonPressed(14)
-      ) {
+      if (this.wasGamepadButtonPressed(12) || this.wasGamepadButtonPressed(14)) {
         return -1;
       }
 
-      if (
-        this.wasGamepadButtonPressed(13) ||
-        this.wasGamepadButtonPressed(15)
-      ) {
+      if (this.wasGamepadButtonPressed(13) || this.wasGamepadButtonPressed(15)) {
         return 1;
       }
     }
@@ -346,24 +397,25 @@ export default class WorldMapScene extends Phaser.Scene {
     const separator = '   |   ';
     const textAfterA = 'Valider';
 
-    const temp1 = this.add
-      .text(0, 0, textAfterStick, styleMain)
-      .setVisible(false);
+    const temp1 = this.add.text(0, 0, textAfterStick, styleMain).setVisible(false);
     const temp2 = this.add.text(0, 0, separator, styleMain).setVisible(false);
-    const temp3 = this.add
-      .text(0, 0, textAfterA, styleAccent)
-      .setVisible(false);
+    const temp3 = this.add.text(0, 0, textAfterA, styleAccent).setVisible(false);
 
     const iconSize = 24;
     const gap = 8;
 
     const totalWidth =
-      iconSize + gap + temp1.width + temp2.width + iconSize + gap + temp3.width;
+      iconSize +
+      gap +
+      temp1.width +
+      temp2.width +
+      iconSize +
+      gap +
+      temp3.width;
 
     let currentX = centerX - totalWidth / 2;
 
-    this.add
-      .image(currentX, y + 2, 'btn-stick')
+    this.add.image(currentX, y + 2, 'btn-stick')
       .setOrigin(0, 0.5)
       .setDisplaySize(iconSize, iconSize);
     currentX += iconSize + gap;
@@ -374,8 +426,7 @@ export default class WorldMapScene extends Phaser.Scene {
     this.add.text(currentX, y - 11, separator, styleMain).setOrigin(0, 0);
     currentX += temp2.width;
 
-    this.add
-      .image(currentX, y + 2, 'btn-a')
+    this.add.image(currentX, y + 2, 'btn-a')
       .setOrigin(0, 0.5)
       .setDisplaySize(iconSize, iconSize);
     currentX += iconSize + gap;
