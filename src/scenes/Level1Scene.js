@@ -111,14 +111,17 @@ export default class Level1Scene extends Phaser.Scene {
     this.hud = new HudView(this);
 
     this.interactionFeedbackText = this.add.text(24, 704, '', {
-        fontFamily: 'monospace',
-        fontSize: '18px',
-        color: '#ffffff',
+      fontFamily: 'monospace',
+      fontSize: '18px',
+      color: '#ffffff',
     });
     this.interactionFeedbackText.setDepth(100);
     this.interactionFeedbackText.setVisible(false);
 
     this.createControlHints();
+
+    this.lowWaterWarningVisible = false;
+    this.createLowWaterBubble();
   }
 
   update(time, delta) {
@@ -133,6 +136,7 @@ export default class Level1Scene extends Phaser.Scene {
     this.handleShooting(input, delta);
     this.drawFires();
     this.hud.update();
+    this.updateLowWaterBubble();
 
     this.checkEndConditions();
   }
@@ -337,9 +341,11 @@ export default class Level1Scene extends Phaser.Scene {
 
   showInteractionFeedback(message) {
     this.interactionFeedbackText.setText(message);
+    this.interactionFeedbackText.setVisible(true);
 
     this.time.delayedCall(1200, () => {
       this.interactionFeedbackText.setText('');
+      this.interactionFeedbackText.setVisible(false);
     });
   }
 
@@ -385,15 +391,13 @@ export default class Level1Scene extends Phaser.Scene {
       return { addIcon, addText };
     };
 
-    // Bloc gauche
     const left = createBuilder(24);
     left.addIcon('btn-stick', 32, 0.9);
-    left.addText(' : viser le jet   ', 8);
+    left.addText(' : se déplacer   ', 8);
 
     left.addIcon('btn-a', 32, 0.85);
     left.addText(' : recharger en eau', 8);
 
-    // Bloc droit
     const right = createBuilder(860);
     right.addIcon('btn-rt', 32, 0.85);
     right.addText(' : jet faible   ', 8);
@@ -402,5 +406,91 @@ export default class Level1Scene extends Phaser.Scene {
     right.addText(' + ', 3);
     right.addIcon('btn-rt', 32, 0.85);
     right.addText(' : jet puissant');
+  }
+
+  createLowWaterBubble() {
+    this.lowWaterBubble = this.add.graphics();
+    this.lowWaterBubble.setDepth(120);
+    this.lowWaterBubble.setVisible(false);
+
+    this.lowWaterText = this.add.text(0, 0, 'Eau faible !\nRetour au camion !', {
+      fontFamily: 'monospace',
+      fontSize: '14px',
+      color: '#1a1a1a',
+      align: 'center',
+      lineSpacing: 2,
+    });
+
+    this.lowWaterText.setOrigin(0.5);
+    this.lowWaterText.setDepth(121);
+    this.lowWaterText.setVisible(false);
+  }
+
+  shouldShowLowWaterBubble() {
+    if (this.resourceSystem.activeAgent !== 'water') {
+      return false;
+    }
+
+    if (this.lowWaterWarningVisible) {
+      return this.resourceSystem.waterReserve <= 35;
+    }
+
+    return this.resourceSystem.waterReserve <= 25;
+  }
+
+  updateLowWaterBubble() {
+    this.lowWaterWarningVisible = this.shouldShowLowWaterBubble();
+
+    if (!this.lowWaterWarningVisible) {
+      this.lowWaterBubble.clear();
+      this.lowWaterBubble.setVisible(false);
+      this.lowWaterText.setVisible(false);
+      return;
+    }
+
+    const playerPosition = this.player.getPosition();
+    const bubbleCenterX = playerPosition.x;
+    const bubbleCenterY = playerPosition.y - 78;
+
+    this.lowWaterText.setText('Eau faible !\nRetour au camion !');
+    this.lowWaterText.setPosition(bubbleCenterX, bubbleCenterY);
+    this.lowWaterText.setVisible(true);
+
+    const bounds = this.lowWaterText.getBounds();
+    const paddingX = 10;
+    const paddingY = 8;
+    const tailHeight = 10;
+    const tailHalfWidth = 8;
+
+    const rectX = bounds.x - paddingX;
+    const rectY = bounds.y - paddingY;
+    const rectWidth = bounds.width + paddingX * 2;
+    const rectHeight = bounds.height + paddingY * 2;
+    const tailBaseY = rectY + rectHeight;
+
+    this.lowWaterBubble.clear();
+    this.lowWaterBubble.setVisible(true);
+
+    this.lowWaterBubble.fillStyle(0xf8f1cf, 0.96);
+    this.lowWaterBubble.lineStyle(2, 0x3a2f1f, 1);
+
+    this.lowWaterBubble.fillRoundedRect(rectX, rectY, rectWidth, rectHeight, 8);
+    this.lowWaterBubble.strokeRoundedRect(rectX, rectY, rectWidth, rectHeight, 8);
+
+    this.lowWaterBubble.fillTriangle(
+      bubbleCenterX - tailHalfWidth, tailBaseY,
+      bubbleCenterX + tailHalfWidth, tailBaseY,
+      bubbleCenterX, tailBaseY + tailHeight
+    );
+
+    this.lowWaterBubble.lineBetween(
+      bubbleCenterX - tailHalfWidth, tailBaseY,
+      bubbleCenterX, tailBaseY + tailHeight
+    );
+
+    this.lowWaterBubble.lineBetween(
+      bubbleCenterX + tailHalfWidth, tailBaseY,
+      bubbleCenterX, tailBaseY + tailHeight
+    );
   }
 }
