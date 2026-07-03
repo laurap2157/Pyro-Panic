@@ -164,7 +164,17 @@ export default class Level2Scene extends Phaser.Scene {
     // =====================================================
     // 10. Rendu dynamique principal
     // =====================================================
-    this.graphics = this.add.graphics();
+    // Deux calques séparés évitent les chevauchements gênants :
+    // - les barres de vie restent au-dessus des sprites ;
+    // - le jet reste au-dessus des portes, des feux et des barres.
+    this.fireGraphics = this.add.graphics();
+    this.fireGraphics.setDepth(85);
+
+    this.sprayGraphics = this.add.graphics();
+    this.sprayGraphics.setDepth(95);
+
+    // Alias conservé par sécurité si du code temporaire l’utilise encore.
+    this.graphics = this.fireGraphics;
 
     // =====================================================
     // 11. HUD
@@ -211,7 +221,8 @@ export default class Level2Scene extends Phaser.Scene {
     // =====================================================
     // 4. Nettoyage du rendu dynamique
     // =====================================================
-    this.graphics.clear();
+    this.fireGraphics.clear();
+    this.sprayGraphics.clear();
 
     // =====================================================
     // 5. Gameplay de tir
@@ -247,7 +258,11 @@ export default class Level2Scene extends Phaser.Scene {
     const animKey = fire.size === 'large' ? 'fire-large-burn' : 'fire-small-burn';
 
     fire.sprite = this.add.sprite(fire.x, fire.y, textureKey, 0);
-    fire.sprite.setDepth(3);
+
+    // Les feux cachés doivent apparaître devant la porte ouverte
+    // une fois révélés. Les feux visibles gardent leur profondeur
+    // habituelle pour limiter les effets de bord sur le décor.
+    fire.sprite.setDepth(fire.isHidden ? 12 : 3);
     fire.sprite.play(animKey);
     fire.sprite.setVisible(fire.isRevealed);
 
@@ -345,6 +360,7 @@ export default class Level2Scene extends Phaser.Scene {
     hiddenFire.isRevealed = true;
 
     if (hiddenFire.sprite) {
+      hiddenFire.sprite.setDepth(12);
       hiddenFire.sprite.setVisible(true);
       hiddenFire.sprite.setAlpha(1);
     }
@@ -394,14 +410,14 @@ export default class Level2Scene extends Phaser.Scene {
     const sprayColor = power === 'strong' ? 0x66ccff : 0x99ddff;
     const sprayThickness = power === 'strong' ? 8 : 4;
 
-    this.graphics.lineStyle(sprayThickness, sprayColor, 0.85);
-    this.graphics.beginPath();
-    this.graphics.moveTo(sprayOrigin.x, sprayOrigin.y);
-    this.graphics.lineTo(
+    this.sprayGraphics.lineStyle(sprayThickness, sprayColor, 0.85);
+    this.sprayGraphics.beginPath();
+    this.sprayGraphics.moveTo(sprayOrigin.x, sprayOrigin.y);
+    this.sprayGraphics.lineTo(
       sprayOrigin.x + aimDirection.x * sprayLength,
       sprayOrigin.y + aimDirection.y * sprayLength,
     );
-    this.graphics.strokePath();
+    this.sprayGraphics.strokePath();
   }
 
   drawFires() {
@@ -430,11 +446,11 @@ export default class Level2Scene extends Phaser.Scene {
       const radius = this.getFireRadius(fire);
       const hpRatio = fire.hp / fire.maxHp;
 
-      this.graphics.fillStyle(0x222222, 1);
-      this.graphics.fillRect(fire.x - 24, fire.y - radius - 18, 48, 6);
+      this.fireGraphics.fillStyle(0x222222, 1);
+      this.fireGraphics.fillRect(fire.x - 24, fire.y - radius - 18, 48, 6);
 
-      this.graphics.fillStyle(0xff3333, 1);
-      this.graphics.fillRect(
+      this.fireGraphics.fillStyle(0xff3333, 1);
+      this.fireGraphics.fillRect(
         fire.x - 24,
         fire.y - radius - 18,
         48 * hpRatio,

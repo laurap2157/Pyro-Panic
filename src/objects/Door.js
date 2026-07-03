@@ -40,7 +40,10 @@ export default class Door {
       );
 
       this.openSprite.setScale(config.openSpriteScale ?? 0.18);
-      this.openSprite.setDepth(config.openSpriteDepth ?? 2);
+
+      // La porte ouverte doit rester devant le décor,
+      // mais derrière le feu caché révélé et derrière le jet.
+      this.openSprite.setDepth(config.openSpriteDepth ?? 6);
       this.openSprite.setVisible(false);
     }
 
