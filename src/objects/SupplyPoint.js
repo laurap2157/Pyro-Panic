@@ -8,7 +8,7 @@ export default class SupplyPoint {
         this.height = config.height || 64;
         this.agent = config.agent || 'water';
         this.amount = config.amount ?? 100;
-        this.label = config.label || config.prompt || 'Approvisionnement';
+        this.label = config.label ?? config.prompt ?? '';
 
         this.sprite = scene.add.rectangle(
             this.x + this.width / 2,
@@ -16,15 +16,16 @@ export default class SupplyPoint {
             this.width,
             this.height,
             this.getColor(),
-            0.45
+            0
         );
-        this.sprite.setStrokeStyle(2, 0xffffff, 0.8);
+        this.sprite.setStrokeStyle(0, 0xffffff, 0);
         this.sprite.setDepth(1);
+        this.sprite.setVisible(false);
 
         this.text = scene.add.text(
             this.x + this.width / 2,
             this.y - 18,
-            this.label,
+            '',
             {
                 fontFamily: 'monospace',
                 fontSize: '14px',
@@ -33,6 +34,7 @@ export default class SupplyPoint {
         );
         this.text.setOrigin(0.5);
         this.text.setDepth(5);
+        this.text.setVisible(false);
     }
 
     getColor() {

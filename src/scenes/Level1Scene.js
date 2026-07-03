@@ -13,7 +13,7 @@ import CollisionSystem from '../systems/CollisionSystem.js';
 import { level1Layout } from '../data/Level1Layout.js';
 
 const SPRAY_RANGE = 220;
-const SPRAY_WIDTH = 35;
+const SPRAY_WIDTH = 18;
 
 export default class Level1Scene extends Phaser.Scene {
   constructor() {
@@ -106,11 +106,12 @@ export default class Level1Scene extends Phaser.Scene {
     this.hud = new HudView(this);
 
     this.interactionFeedbackText = this.add.text(24, 704, '', {
-      fontFamily: 'monospace',
-      fontSize: '18px',
-      color: '#ffffff',
+        fontFamily: 'monospace',
+        fontSize: '18px',
+        color: '#ffffff',
     });
     this.interactionFeedbackText.setDepth(100);
+    this.interactionFeedbackText.setVisible(false);
 
     this.helpText = this.add.text(
       24,
@@ -179,36 +180,38 @@ export default class Level1Scene extends Phaser.Scene {
     });
   }
 
-  getTouchedFires(sprayOrigin, aimDirection) {
-    return this.fires.filter((fire) => {
-      if (fire.isExtinguished) {
-        return false;
-      }
+getTouchedFires(sprayOrigin, aimDirection) {
+  return this.fires.filter((fire) => {
+    if (fire.isExtinguished) {
+      return false;
+    }
 
-      const fireVectorX = fire.x - sprayOrigin.x;
-      const fireVectorY = fire.y - sprayOrigin.y;
+    const fireVectorX = fire.x - sprayOrigin.x;
+    const fireVectorY = fire.y - sprayOrigin.y;
 
-      const projection =
-        fireVectorX * aimDirection.x +
-        fireVectorY * aimDirection.y;
+    const projection =
+      fireVectorX * aimDirection.x +
+      fireVectorY * aimDirection.y;
 
-      if (projection < 0 || projection > SPRAY_RANGE) {
-        return false;
-      }
+    if (projection < 0 || projection > SPRAY_RANGE) {
+      return false;
+    }
 
-      const closestPointX = sprayOrigin.x + aimDirection.x * projection;
-      const closestPointY = sprayOrigin.y + aimDirection.y * projection;
+    const closestPointX = sprayOrigin.x + aimDirection.x * projection;
+    const closestPointY = sprayOrigin.y + aimDirection.y * projection;
 
-      const distanceToSpray = Phaser.Math.Distance.Between(
-        fire.x,
-        fire.y,
-        closestPointX,
-        closestPointY,
-      );
+    const distanceToSpray = Phaser.Math.Distance.Between(
+      fire.x,
+      fire.y,
+      closestPointX,
+      closestPointY,
+    );
 
-      return distanceToSpray <= SPRAY_WIDTH;
-    });
-  }
+    const fireHitRadius = fire.size === 'large' ? 16 : 12;
+
+    return distanceToSpray <= SPRAY_WIDTH + fireHitRadius;
+  });
+}
 
   drawSpray(sprayOrigin, aimDirection, power) {
     const sprayLength = power === 'strong' ? SPRAY_RANGE : SPRAY_RANGE * 0.75;

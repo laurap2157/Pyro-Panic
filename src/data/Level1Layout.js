@@ -17,8 +17,10 @@ export const level1Layout = {
     { x: 893, y: 159, width: 88, height: 44, type: 'decor_block' },
     { x: 1008, y: 157, width: 86, height: 51, type: 'decor_block' },
     { x: 1297, y: 157, width: 47, height: 36, type: 'decor_block' },
+    { x: 1290, y: 640, width: 76, height: 62, type: 'decor_block' },
 
-    { x: 1290, y: 640, width: 76, height: 62, type: 'decor_block' }
+    // blocage du trottoir du bas
+    { x: 0, y: 655, width: 1366, height: 113, type: 'bottom_sidewalk_block' }
   ],
 
   decorations: [
@@ -36,14 +38,37 @@ export const level1Layout = {
   ],
 
   interactives: [
+    // gauche du camion
     {
-      x: 430,
-      y: 575,
+      x: 55,
+      y: 525,
       width: 35,
-      height: 70,
+      height: 130,
       type: 'water_refill',
-      key: 'firetruck',
-      prompt: 'Recharger en eau'
+      key: 'firetruck_left',
+      prompt: ''
+    },
+
+    // droite du camion
+    {
+      x: 470,
+      y: 525,
+      width: 35,
+      height: 130,
+      type: 'water_refill',
+      key: 'firetruck_right',
+      prompt: ''
+    },
+
+    // au-dessus du camion
+    {
+      x: 120,
+      y: 470,
+      width: 320,
+      height: 35,
+      type: 'water_refill',
+      key: 'firetruck_top',
+      prompt: ''
     }
   ]
 };
